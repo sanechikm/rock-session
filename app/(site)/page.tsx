@@ -14,6 +14,8 @@ import Faq from '@/components/Faq';
 import Contacts from '@/components/Contacts';
 import { supabase } from '@/lib/supabase';
 
+export const dynamic = 'force-dynamic';
+
 // Дефолтный порядок блоков (если в базе пусто)
 const DEFAULT_BLOCKS = [
   { id: 'about', title: 'О нас', visible: true },

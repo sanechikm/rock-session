@@ -5,6 +5,8 @@ import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import { supabase } from '@/lib/supabase';
 
+export const dynamic = 'force-dynamic';
+
 const DEFAULT_ACCENT = '#00C3D0';
 
 export default async function SiteLayout({ children }: { children: React.ReactNode }) {
