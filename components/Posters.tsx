@@ -57,6 +57,7 @@ const POSTERS_CSS = `
   .rsc-posters {
     background: #060606;
     padding: 110px 24px 40px;
+    overflow-x: clip; /* сдвиг билета при hover не расширяет страницу */
   }
 
   .rsc-posters__inner {
@@ -70,7 +71,7 @@ const POSTERS_CSS = `
     font-family: 'Tablon', 'Arial Black', sans-serif;
     font-size: clamp(36px, 6vw, 64px);
     line-height: 1;
-    font-weight: 400;
+    font-weight: 600;
     text-transform: uppercase;
     color: #ffffff;
   }
@@ -102,22 +103,42 @@ const POSTERS_CSS = `
     position: relative;
     display: flex;
     align-items: stretch;
-    background: #141414;
-    border: 1px solid rgba(255, 255, 255, 0.35);
-    -webkit-mask-image:
-      radial-gradient(circle 9px at 0 50%, transparent 98%, #000 100%),
-      radial-gradient(circle 9px at 100% 50%, transparent 98%, #000 100%);
-    mask-image:
-      radial-gradient(circle 9px at 0 50%, transparent 98%, #000 100%),
-      radial-gradient(circle 9px at 100% 50%, transparent 98%, #000 100%);
-    -webkit-mask-size: 100% 26px, 100% 26px;
-    mask-size: 100% 26px, 100% 26px;
-    -webkit-mask-repeat: repeat-y, repeat-y;
-    mask-repeat: repeat-y, repeat-y;
+    transition: transform 0.35s cubic-bezier(0.22, 0.8, 0.3, 1),
+      opacity 0.6s ease;
+  }
+
+  /* Билеты скрыты, пока список не попал в зону видимости */
+  .rsc-posters__list:not(.rsc-posters__list--in) .rsc-ticket {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+
+  /* При наведении весь билет чуть едет вправо (только десктоп) */
+  @media (hover: hover) {
+    .rsc-ticket:hover {
+      transform: translateX(8px);
+    }
+  }
+
+  /* SVG-рамка: вырезы по краям + перфорация корешка */
+  .rsc-ticket-frame {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+  }
+
+  /* Контент поверх рамки */
+  .rsc-ticket__inner {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    align-items: stretch;
+    width: 100%;
   }
 
   .rsc-ticket--accent {
-    background: var(--accent, #00c3d0);
+    background: none;
     border-color: var(--accent, #00c3d0);
   }
 
@@ -135,6 +156,7 @@ const POSTERS_CSS = `
   .rsc-ticket__day {
     font-family: 'Tablon', 'Arial Black', sans-serif;
     font-size: 54px;
+    font-weight: 600;
     line-height: 1;
     color: var(--accent, #00c3d0);
   }
@@ -151,7 +173,7 @@ const POSTERS_CSS = `
 
   .rsc-ticket__body {
     flex: 1;
-    padding: 32px 36px;
+    padding: 32px 40px 24px 36px; /* справа воздух до перфорации */
     min-width: 0;
   }
 
@@ -160,7 +182,7 @@ const POSTERS_CSS = `
     font-family: 'Tablon', 'Arial Black', sans-serif;
     font-size: clamp(24px, 3vw, 36px);
     line-height: 1.1;
-    font-weight: 400;
+    font-weight: 600;
     text-transform: uppercase;
     color: var(--accent, #00c3d0);
   }
@@ -169,7 +191,7 @@ const POSTERS_CSS = `
 
   .rsc-ticket__description {
     margin: 0 0 12px;
-    max-width: 720px;
+    max-width: 620px; /* длинный текст не тянется к корешку */
     font-family: 'Poppins', sans-serif;
     font-size: 15px;
     font-weight: 300;
@@ -266,37 +288,39 @@ const POSTERS_CSS = `
   }
 
   .rsc-ticket__qr {
+    position: relative;
     flex-shrink: 0;
-    width: 120px;
+    width: 160px;
     display: flex;
-    gap: 10px;
-    padding: 20px 18px;
-    border-left: 2px dashed rgba(255, 255, 255, 0.3);
+    padding: 20px 32px 20px 26px; /* слева зона перфорации, штрихкод в стабе */
     align-items: stretch;
   }
 
-  .rsc-ticket--accent .rsc-ticket__qr {
-    border-left-color: rgba(6, 6, 6, 0.35);
+  /* Перфорация: вертикальный ряд точек — корешок как будто можно оторвать.
+     На десктопе её рисует SVG-рамка; точки — только мобильная версия. */
+  .rsc-ticket__qr::before {
+    content: none;
+    position: absolute;
+    top: 12px;
+    bottom: 12px;
+    left: 7px;
+    width: 12px;
+    background-image: radial-gradient(circle 2.2px, rgba(255, 255, 255, 0.9) 97%, transparent 100%);
+    background-size: 12px 22px;
+    background-position: center 0;
+    background-repeat: repeat-y;
   }
 
-  .rsc-ticket__qr-dots {
+  .rsc-ticket--accent .rsc-ticket__qr::before {
+    background-image: radial-gradient(circle 2.2px, #060606 97%, transparent 100%);
+  }
+
+
+  /* Штрихкод (SVG с хаотичной толщиной линий) */
+  .rsc-barcode {
     flex: 1;
-    background-image: radial-gradient(circle, #ffffff 2.2px, transparent 2.6px);
-    background-size: 11px 15px;
-    background-position: center;
-  }
-
-  .rsc-ticket__qr-bars {
-    flex: 1.4;
-    background-image: repeating-linear-gradient(0deg, #ffffff 0 2.5px, transparent 2.5px 7px);
-  }
-
-  .rsc-ticket--accent .rsc-ticket__qr-dots {
-    background-image: radial-gradient(circle, #060606 2.2px, transparent 2.6px);
-  }
-
-  .rsc-ticket--accent .rsc-ticket__qr-bars {
-    background-image: repeating-linear-gradient(0deg, #060606 0 2.5px, transparent 2.5px 7px);
+    width: 100%;
+    height: auto;
   }
 
   /* ---------- МОДАЛКА СОБЫТИЯ ---------- */
@@ -398,7 +422,7 @@ const POSTERS_CSS = `
     font-family: 'Tablon', 'Arial Black', sans-serif;
     font-size: clamp(28px, 4vw, 44px);
     line-height: 1.05;
-    font-weight: 400;
+    font-weight: 600;
     text-transform: uppercase;
     color: #ffffff;
   }
@@ -426,7 +450,7 @@ const POSTERS_CSS = `
     margin: 0 0 16px;
     font-family: 'Tablon', 'Arial Black', sans-serif;
     font-size: 20px;
-    font-weight: 400;
+    font-weight: 600;
     text-transform: uppercase;
     color: var(--accent, #00c3d0);
   }
@@ -633,16 +657,27 @@ const POSTERS_CSS = `
 
     .rsc-ticket {
       flex-direction: column;
-      -webkit-mask-image:
-        radial-gradient(circle 9px at 50% 0, transparent 98%, #000 100%),
-        radial-gradient(circle 9px at 50% 100%, transparent 98%, #000 100%);
-      mask-image:
-        radial-gradient(circle 9px at 50% 0, transparent 98%, #000 100%),
-        radial-gradient(circle 9px at 50% 100%, transparent 98%, #000 100%);
-      -webkit-mask-size: 26px 100%, 26px 100%;
-      mask-size: 26px 100%, 26px 100%;
-      -webkit-mask-repeat: repeat-x, repeat-x;
-      mask-repeat: repeat-x, repeat-x;
+      /* SVG-рамка на мобильном не используется (сильное искажение) —
+         дырки рисуем точками на верхнем и нижнем краях */
+      background-image:
+        radial-gradient(circle 5.5px, #060606 97%, transparent 100%),
+        radial-gradient(circle 5.5px, #060606 97%, transparent 100%);
+      background-color: #141414;
+      background-size: 26px 11px, 26px 11px;
+      background-position: 13px -5.5px, 13px calc(100% + 5.5px);
+      background-repeat: repeat-x, repeat-x;
+    }
+
+    .rsc-ticket--accent {
+      background-color: var(--accent, #00c3d0);
+    }
+
+    .rsc-ticket-frame {
+      display: none;
+    }
+
+    .rsc-ticket__inner {
+      flex-direction: column;
     }
 
     .rsc-ticket__date {
@@ -663,16 +698,14 @@ const POSTERS_CSS = `
     .rsc-ticket__actions { flex-direction: column; }
     .rsc-ticket__btn { width: 100%; min-width: 0; }
 
+    /* В мобильной версии корешка со штрихкодом нет */
     .rsc-ticket__qr {
-      width: 100%;
-      height: 56px;
-      border-left: none;
-      border-top: 2px dashed rgba(255, 255, 255, 0.3);
-      padding: 12px 24px;
+      display: none;
     }
 
-    .rsc-ticket--accent .rsc-ticket__qr {
-      border-top-color: rgba(6, 6, 6, 0.35);
+    /* При нажатии на билет он чуть приподнимается вверх */
+    .rsc-ticket:active {
+      transform: translateY(-4px);
     }
 
     .rsc-pm__content { padding: 0 20px 24px; }

@@ -1,7 +1,7 @@
 // components/Hero.tsx
 // Hero-блок: ближайшее предстоящее событие из Supabase.
 // Фон — обложка события (image), если нет — /hero-bg.jpg из public.
-// Если нет ни одной будущей афиши — блок не рендерится.
+// Если будущих афиш нет — блок не рендерится.
 
 import { supabase } from '@/lib/supabase';
 import AnchorLink from './AnchorLink';
@@ -32,7 +32,6 @@ type Poster = {
 };
 
 export default async function Hero() {
-  /* Все будущие видимые афиши — найдём ближайшую по дате */
   const { data: events } = await supabase
     .from('posters')
     .select('title, description, day, month, time, venue, price_from, price_to, ticket_url, image')
@@ -56,7 +55,6 @@ export default async function Hero() {
       <style>{HERO_CSS}</style>
 
       <section className="rsc-hero" id="hero">
-        {/* Фоновое изображение + затемнение */}
         <div
           className="rsc-hero__bg"
           style={{ backgroundImage: `url(${bg})` }}
@@ -129,6 +127,12 @@ const HERO_CSS = `
     background-size: cover;
     background-position: center;
     filter: brightness(0.45);
+    animation: rsc-hero-zoom 12s ease-out forwards; /* лёгкий наезд фона при загрузке */
+  }
+
+  @keyframes rsc-hero-zoom {
+    from { transform: scale(1.06); }
+    to   { transform: scale(1); }
   }
 
   .rsc-hero__bg::after {
@@ -147,38 +151,59 @@ const HERO_CSS = `
   .rsc-hero__content {
     position: relative;
     z-index: 1;
-    max-width: 1100px;
+    max-width: 980px;
     padding: 140px 24px 80px;
     text-align: center;
   }
 
+  /* Каскадное появление контента при загрузке */
+  .rsc-hero__tag,
+  .rsc-hero__title,
+  .rsc-hero__description,
+  .rsc-hero__info,
+  .rsc-hero__actions {
+    animation: rsc-hero-rise 0.8s cubic-bezier(0.22, 0.8, 0.3, 1) both;
+  }
+  .rsc-hero__tag        { animation-delay: 0.1s; }
+  .rsc-hero__title      { animation-delay: 0.2s; }
+  .rsc-hero__description{ animation-delay: 0.35s; }
+  .rsc-hero__info       { animation-delay: 0.5s; }
+  .rsc-hero__actions    { animation-delay: 0.65s; }
+
+  @keyframes rsc-hero-rise {
+    from { opacity: 0; transform: translateY(22px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
   .rsc-hero__tag {
-    margin: 0 0 16px;
+    margin: 0 0 18px;
     font-family: 'Belepotan', 'Poppins', sans-serif;
-    font-size: 20px;
-    letter-spacing: 0.12em;
+    font-size: clamp(16px, 1.8vw, 20px);
+    letter-spacing: 0.14em;
     text-transform: uppercase;
     color: var(--accent, #00c3d0);
   }
 
+  /* Заголовок: уменьшен, начертание корректируется шрифтом Tablon,
+     запасной вариант сделан легче через font-weight и разрядку */
   .rsc-hero__title {
-    margin: 0 0 24px;
-    font-family: 'Tablon', 'Arial Black', sans-serif;
-    font-size: clamp(48px, 9vw, 110px);
+    margin: 0 0 26px;
+    font-family: 'Tablon', 'Arial Narrow', 'Arial', sans-serif;
+    font-size: clamp(40px, 6.5vw, 84px);
     line-height: 1;
-    font-weight: 400;
+    font-weight: 600;
+    letter-spacing: 0.03em;
     text-transform: uppercase;
     color: #ffffff;
-    letter-spacing: 0.01em;
   }
 
   .rsc-hero__description {
-    margin: 0 auto 36px;
-    max-width: 720px;
+    margin: 0 auto 38px;
+    max-width: 680px;
     font-family: 'Poppins', sans-serif;
-    font-size: clamp(16px, 2vw, 20px);
+    font-size: clamp(15px, 1.8vw, 18px);
     font-weight: 300;
-    line-height: 1.6;
+    line-height: 1.65;
     color: #8e8e93;
   }
 
@@ -186,10 +211,10 @@ const HERO_CSS = `
     display: flex;
     justify-content: center;
     flex-wrap: wrap;
-    gap: 16px 56px;
-    margin-bottom: 44px;
+    gap: 14px 48px;
+    margin-bottom: 40px;
     font-family: 'Poppins', sans-serif;
-    font-size: clamp(16px, 2vw, 20px);
+    font-size: clamp(15px, 1.8vw, 18px);
     font-weight: 500;
     color: #ffffff;
   }
@@ -197,21 +222,23 @@ const HERO_CSS = `
   .rsc-hero__actions {
     display: flex;
     justify-content: center;
-    gap: 20px;
+    gap: 16px;
     flex-wrap: wrap;
   }
 
+  /* Кнопки: компактнее — уменьшены отступы и ширина */
   .rsc-hero__btn {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    min-width: 220px;
-    padding: 18px 32px;
+    min-width: 190px;
+    padding: 13px 26px;
     font-family: 'Poppins', sans-serif;
-    font-size: 17px;
+    font-size: 15px;
     font-weight: 500;
     text-decoration: none;
     border: 2px solid var(--accent, #00c3d0);
+    cursor: pointer;
     transition: background 0.25s ease, color 0.25s ease, transform 0.2s ease;
   }
 
@@ -247,7 +274,7 @@ const HERO_CSS = `
       flex-direction: column;
       align-items: center;
       gap: 10px;
-      margin-bottom: 36px;
+      margin-bottom: 32px;
     }
 
     .rsc-hero__actions {

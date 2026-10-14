@@ -8,6 +8,8 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
 import EventModal, { type EventData } from './EventModal';
+import TicketFrame from './TicketFrame';
+import Barcode from './Barcode';
 
 const VISIBLE_COUNT = 3;
 
@@ -53,6 +55,8 @@ export default function PastEvents() {
             <div className="rsc-past__list">
               {events.slice(0, visibleCount).map((event) => (
                 <article key={event.id} className="rsc-past-ticket">
+                  <TicketFrame />
+                  <div className="rsc-past-ticket__inner">
                   <div className="rsc-past-ticket__date">
                     <span className="rsc-past-ticket__day">{event.day}</span>
                     <span className="rsc-past-ticket__month">
@@ -83,8 +87,8 @@ export default function PastEvents() {
                   </div>
 
                   <div className="rsc-past-ticket__qr" aria-hidden="true">
-                    <span className="rsc-past-ticket__qr-dots" />
-                    <span className="rsc-past-ticket__qr-bars" />
+                    <Barcode />
+                  </div>
                   </div>
                 </article>
               ))}
@@ -113,6 +117,7 @@ const PAST_CSS = `
   .rsc-past {
     background: #060606;
     padding: 40px 24px 120px;
+    overflow-x: clip;
   }
 
   .rsc-past__inner {
@@ -126,7 +131,7 @@ const PAST_CSS = `
     font-family: 'Tablon', 'Arial Black', sans-serif;
     font-size: clamp(36px, 6vw, 64px);
     line-height: 1;
-    font-weight: 400;
+    font-weight: 600;
     text-transform: uppercase;
     color: #ffffff;
   }
@@ -155,18 +160,29 @@ const PAST_CSS = `
     position: relative;
     display: flex;
     align-items: stretch;
-    background: #141414;
-    border: 1px solid rgba(255, 255, 255, 0.35);
-    -webkit-mask-image:
-      radial-gradient(circle 9px at 0 50%, transparent 98%, #000 100%),
-      radial-gradient(circle 9px at 100% 50%, transparent 98%, #000 100%);
-    mask-image:
-      radial-gradient(circle 9px at 0 50%, transparent 98%, #000 100%),
-      radial-gradient(circle 9px at 100% 50%, transparent 98%, #000 100%);
-    -webkit-mask-size: 100% 26px, 100% 26px;
-    mask-size: 100% 26px, 100% 26px;
-    -webkit-mask-repeat: repeat-y, repeat-y;
-    mask-repeat: repeat-y, repeat-y;
+    transition: transform 0.35s cubic-bezier(0.22, 0.8, 0.3, 1);
+  }
+
+  /* При наведении весь билет чуть едет вправо (только десктоп) */
+  @media (hover: hover) {
+    .rsc-past-ticket:hover {
+      transform: translateX(8px);
+    }
+  }
+
+  .rsc-ticket-frame {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+  }
+
+  .rsc-past-ticket__inner {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    align-items: stretch;
+    width: 100%;
   }
 
   .rsc-past-ticket__date {
@@ -195,7 +211,7 @@ const PAST_CSS = `
 
   .rsc-past-ticket__body {
     flex: 1;
-    padding: 32px 36px;
+    padding: 32px 40px 32px 36px;
     min-width: 0;
   }
 
@@ -204,14 +220,14 @@ const PAST_CSS = `
     font-family: 'Tablon', 'Arial Black', sans-serif;
     font-size: clamp(24px, 3vw, 36px);
     line-height: 1.1;
-    font-weight: 400;
+    font-weight: 600;
     text-transform: uppercase;
     color: var(--accent, #00c3d0);
   }
 
   .rsc-past-ticket__description {
     margin: 0 0 12px;
-    max-width: 720px;
+    max-width: 620px;
     font-family: 'Poppins', sans-serif;
     font-size: 15px;
     font-weight: 300;
@@ -275,26 +291,30 @@ const PAST_CSS = `
   }
 
   .rsc-past-ticket__qr {
+    position: relative;
     flex-shrink: 0;
-    width: 120px;
+    width: 150px;
     display: flex;
-    gap: 10px;
-    padding: 20px 18px;
-    border-left: 2px dashed rgba(255, 255, 255, 0.3);
+    padding: 20px 20px 20px 26px;
     align-items: stretch;
   }
 
-  .rsc-past-ticket__qr-dots {
-    flex: 1;
-    background-image: radial-gradient(circle, #ffffff 2.2px, transparent 2.6px);
-    background-size: 11px 15px;
-    background-position: center;
+  /* Перфорация: на десктопе её рисует SVG-рамка; точки — только мобильная */
+  .rsc-past-ticket__qr::before {
+    content: none;
+    position: absolute;
+    top: 12px;
+    bottom: 12px;
+    left: 7px;
+    width: 12px;
+    background-image: radial-gradient(circle 2.2px, rgba(255, 255, 255, 0.9) 97%, transparent 100%);
+    background-size: 12px 22px;
+    background-position: center 0;
+    background-repeat: repeat-y;
   }
 
-  .rsc-past-ticket__qr-bars {
-    flex: 1.4;
-    background-image: repeating-linear-gradient(0deg, #ffffff 0 2.5px, transparent 2.5px 7px);
-  }
+
+
 
   .rsc-past__fade {
     position: absolute;
@@ -346,16 +366,21 @@ const PAST_CSS = `
 
     .rsc-past-ticket {
       flex-direction: column;
-      -webkit-mask-image:
-        radial-gradient(circle 9px at 50% 0, transparent 98%, #000 100%),
-        radial-gradient(circle 9px at 50% 100%, transparent 98%, #000 100%);
-      mask-image:
-        radial-gradient(circle 9px at 50% 0, transparent 98%, #000 100%),
-        radial-gradient(circle 9px at 50% 100%, transparent 98%, #000 100%);
-      -webkit-mask-size: 26px 100%, 26px 100%;
-      mask-size: 26px 100%, 26px 100%;
-      -webkit-mask-repeat: repeat-x, repeat-x;
-      mask-repeat: repeat-x, repeat-x;
+      background-image:
+        radial-gradient(circle 5.5px, #060606 97%, transparent 100%),
+        radial-gradient(circle 5.5px, #060606 97%, transparent 100%);
+      background-color: #141414;
+      background-size: 26px 11px, 26px 11px;
+      background-position: 13px -5.5px, 13px calc(100% + 5.5px);
+      background-repeat: repeat-x, repeat-x;
+    }
+
+    .rsc-ticket-frame {
+      display: none;
+    }
+
+    .rsc-past-ticket__inner {
+      flex-direction: column;
     }
 
     .rsc-past-ticket__date {
@@ -376,12 +401,14 @@ const PAST_CSS = `
 
     .rsc-past-ticket__btn { width: 100%; min-width: 0; }
 
+    /* В мобильной версии корешка со штрихкодом нет */
     .rsc-past-ticket__qr {
-      width: 100%;
-      height: 56px;
-      border-left: none;
-      border-top: 2px dashed rgba(255, 255, 255, 0.3);
-      padding: 12px 24px;
+      display: none;
+    }
+
+    /* При нажатии на билет он чуть приподнимается вверх */
+    .rsc-past-ticket:active {
+      transform: translateY(-4px);
     }
 
     .rsc-past__fade { height: 40%; }

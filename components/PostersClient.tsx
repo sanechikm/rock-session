@@ -3,9 +3,11 @@
 
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import type { SitePoster } from './Posters';
 import EventModal from './EventModal';
+import TicketFrame from './TicketFrame';
+import Barcode from './Barcode';
 
 const MONTHS_RU = [
   'янв', 'фев', 'мар', 'апр', 'мая', 'июн',
@@ -24,6 +26,26 @@ export default function PostersClient({ posters }: { posters: SitePoster[] }) {
 
   const openPoster = posters.find((p) => p.id === openId) || null;
 
+  /* Появление списка при прокрутке */
+  const listRef = useRef<HTMLDivElement>(null);
+  const [inView, setInView] = useState(false);
+
+  useEffect(() => {
+    const el = listRef.current;
+    if (!el) return;
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setInView(true);
+          observer.disconnect();
+        }
+      },
+      { threshold: 0.08 }
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
+
   /* Ближайшее событие — акцентная карточка */
   const year = new Date().getFullYear();
   let nearestIndex = -1;
@@ -41,14 +63,20 @@ export default function PostersClient({ posters }: { posters: SitePoster[] }) {
   return (
     <>
       {/* ---------- Список билетов ---------- */}
-      <div className="rsc-posters__list">
+      <div
+        className={'rsc-posters__list' + (inView ? ' rsc-posters__list--in' : '')}
+        ref={listRef}
+      >
         {posters.map((event, index) => {
           const isNearest = index === nearestIndex;
           return (
             <article
               key={event.id}
               className={'rsc-ticket' + (isNearest ? ' rsc-ticket--accent' : '')}
+              style={{ transitionDelay: inView ? `${index * 0.09}s` : '0s' }}
             >
+              <TicketFrame accent={isNearest} />
+              <div className="rsc-ticket__inner">
               <div className="rsc-ticket__date">
                 <span className="rsc-ticket__day">{event.day}</span>
                 <span className="rsc-ticket__month">
@@ -94,8 +122,8 @@ export default function PostersClient({ posters }: { posters: SitePoster[] }) {
               </div>
 
               <div className="rsc-ticket__qr" aria-hidden="true">
-                <span className="rsc-ticket__qr-dots" />
-                <span className="rsc-ticket__qr-bars" />
+                <Barcode dark={isNearest} />
+              </div>
               </div>
             </article>
           );

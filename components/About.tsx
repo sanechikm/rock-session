@@ -1,11 +1,11 @@
 // components/About.tsx
 // Блок «О клубе» в виде плеера.
-// Автоматически листает «треки»: прогресс движется, в конце — следующий заголовок и текст.
-// Можно переключать треки кнопками и ставить на паузу.
+// Автопрокрутка треков; смена: старый заголовок уезжает в сторону переключения,
+// новый выезжает с противоположной. Появление блока — при прокрутке.
 
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import Image from 'next/image';
 
 /* ---------- ДАННЫЕ (позже — из Supabase) ---------- */
@@ -42,28 +42,61 @@ const TRACKS: Track[] = [
   },
 ];
 
-// Длительность одного «трека» в мс (скорость прогресса)
+/* Длительность «трека»: скорость прогресса (мс) */
 const TRACK_DURATION = 12000;
-// Шаг обновления прогресса
+/* Шаг обновления прогресса */
 const TICK = 50;
 /* -------------------------------------------------- */
+
+type SlideDir = 'next' | 'prev';
 
 export default function About() {
   const [trackIndex, setTrackIndex] = useState(0);
   const [progress, setProgress] = useState(0); // 0–100
   const [isPlaying, setIsPlaying] = useState(true);
+  const [slideDir, setSlideDir] = useState<SlideDir>('next');
+  /* Уезжающий трек (для анимации исчезновения) */
+  const [exiting, setExiting] = useState<{ title: string; dir: SlideDir } | null>(null);
+  /* Появление блока при прокрутке */
+  const [inView, setInView] = useState(false);
+  const sectionRef = useRef<HTMLElement>(null);
 
   const track = TRACKS[trackIndex];
 
-  const goTo = useCallback((index: number) => {
-    setTrackIndex((index + TRACKS.length) % TRACKS.length);
-    setProgress(0);
+  /* ---------- Появление блока в зоне видимости ---------- */
+  useEffect(() => {
+    const el = sectionRef.current;
+    if (!el) return;
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setInView(true);
+          observer.disconnect();
+        }
+      },
+      { threshold: 0.15 }
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
   }, []);
 
-  const next = useCallback(() => goTo(trackIndex + 1), [goTo, trackIndex]);
-  const prev = useCallback(() => goTo(trackIndex - 1), [goTo, trackIndex]);
+  /* ---------- Переключение трека с анимацией ---------- */
+  const goTo = useCallback(
+    (index: number, dir: SlideDir) => {
+      setExiting({ title: TRACKS[trackIndex].title, dir });
+      setSlideDir(dir);
+      setTrackIndex((index + TRACKS.length) % TRACKS.length);
+      setProgress(0);
+      // Убираем уезжающий заголовок после конца анимации
+      setTimeout(() => setExiting(null), 650);
+    },
+    [trackIndex]
+  );
 
-  // Движение прогресса; на 100% — автоматически следующий трек
+  const next = useCallback(() => goTo(trackIndex + 1, 'next'), [goTo, trackIndex]);
+  const prev = useCallback(() => goTo(trackIndex - 1, 'prev'), [goTo, trackIndex]);
+
+  /* ---------- Движение прогресса; на 100% — следующий трек ---------- */
   useEffect(() => {
     if (!isPlaying) return;
 
@@ -71,8 +104,11 @@ export default function About() {
       setProgress((p) => {
         const nextP = p + (TICK / TRACK_DURATION) * 100;
         if (nextP >= 100) {
-          // Переключение трека после заполнения полосы
+          // Автопереключение — как «вперёд»
+          setExiting({ title: TRACKS[trackIndex].title, dir: 'next' });
+          setSlideDir('next');
           setTrackIndex((i) => (i + 1) % TRACKS.length);
+          setTimeout(() => setExiting(null), 650);
           return 0;
         }
         return nextP;
@@ -80,32 +116,59 @@ export default function About() {
     }, TICK);
 
     return () => clearInterval(timer);
-  }, [isPlaying]);
+  }, [isPlaying, trackIndex]);
 
   return (
     <>
       <style>{ABOUT_CSS}</style>
 
-      <section className="rsc-about" id="about">
+      <section
+        className={'rsc-about' + (inView ? ' rsc-about--in' : '')}
+        id="about"
+        ref={sectionRef}
+      >
         <div className="rsc-about__inner">
           {/* Заголовки блока */}
           <h2 className="rsc-about__heading">RockSession Club</h2>
           <p className="rsc-about__subheading">Философия клуба</p>
 
-          {/* Обложка «альбома» — акцентный квадрат с логотипом */}
+          {/* Обложка «альбома» */}
           <div className="rsc-about__cover">
             <Image
-              src="/logo.png" // если есть чёрная версия логотипа — укажите её, будет как на макете
+              src="/logo.png"
               alt="RockSession Club"
               width={140}
               height={140}
             />
           </div>
 
-          {/* Название «трека» */}
-          <h3 className="rsc-about__track-title" key={track.title}>
-            {track.title}
-          </h3>
+          {/* Название «трека»: уезжающий + новый */}
+          <div className="rsc-about__track-window" aria-live="polite">
+            {exiting && (
+              <h3
+                key={'exit-' + exiting.title}
+                className={
+                  'rsc-about__track-title rsc-about__track-title--exit' +
+                  (exiting.dir === 'next'
+                    ? ' rsc-about__track-title--exit-left'
+                    : ' rsc-about__track-title--exit-right')
+                }
+              >
+                {exiting.title}
+              </h3>
+            )}
+            <h3
+              key={track.title}
+              className={
+                'rsc-about__track-title' +
+                (slideDir === 'next'
+                  ? ' rsc-about__track-title--in-right'
+                  : ' rsc-about__track-title--in-left')
+              }
+            >
+              {track.title}
+            </h3>
+          </div>
 
           {/* Прогресс-бар */}
           <div
@@ -174,11 +237,19 @@ export default function About() {
   );
 }
 
-/* Стили в константе — проверенный подход */
 const ABOUT_CSS = `
   .rsc-about {
     background: #060606;
     padding: 110px 24px 130px;
+    opacity: 0;
+    transform: translateY(36px);
+    transition: opacity 0.8s ease, transform 0.8s cubic-bezier(0.22, 0.8, 0.3, 1);
+  }
+
+  /* Появление блока при прокрутке */
+  .rsc-about--in {
+    opacity: 1;
+    transform: translateY(0);
   }
 
   .rsc-about__inner {
@@ -187,28 +258,26 @@ const ABOUT_CSS = `
     text-align: center;
   }
 
-  /* Главный заголовок — Tablon */
   .rsc-about__heading {
     margin: 0 0 10px;
-    font-family: 'Tablon', 'Arial Black', sans-serif;
-    font-size: clamp(36px, 6vw, 72px);
+    font-family: 'Tablon', 'Arial Narrow', 'Arial', sans-serif;
+    font-size: clamp(34px, 5.5vw, 64px);
     line-height: 1;
-    font-weight: 400;
+    font-weight: 600;
+    letter-spacing: 0.03em;
     text-transform: uppercase;
     color: #ffffff;
   }
 
-  /* Подзаголовок — Belepotan, акцентный */
   .rsc-about__subheading {
     margin: 0 0 56px;
     font-family: 'Belepotan', 'Poppins', sans-serif;
-    font-size: clamp(18px, 2.4vw, 26px);
+    font-size: clamp(17px, 2.2vw, 24px);
     letter-spacing: 0.1em;
     text-transform: uppercase;
-    color: var(--accent);
+    color: var(--accent, #00c3d0);
   }
 
-  /* Обложка: акцентный квадрат с логотипом */
   .rsc-about__cover {
     width: 220px;
     height: 220px;
@@ -216,23 +285,75 @@ const ABOUT_CSS = `
     display: flex;
     align-items: center;
     justify-content: center;
-    background: var(--accent);
+    background: var(--accent, #00c3d0);
     border-radius: 4px;
     overflow: hidden;
   }
 
-  /* Название «трека» — Tablon */
-  .rsc-about__track-title {
+  /* ---------- Окно названия трека: обрезает уезжающие заголовки ---------- */
+  .rsc-about__track-window {
+    position: relative;
+    height: clamp(40px, 5vw, 62px);
     margin: 0 0 40px;
-    font-family: 'Tablon', 'Arial Black', sans-serif;
-    font-size: clamp(32px, 5vw, 56px);
-    line-height: 1;
-    font-weight: 400;
-    text-transform: uppercase;
-    color: #ffffff;
+    overflow: hidden;
   }
 
-  /* Прогресс-бар */
+  .rsc-about__track-title {
+    position: absolute;
+    inset: 0;
+    margin: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Tablon', 'Arial Narrow', 'Arial', sans-serif;
+    font-size: clamp(32px, 5vw, 54px);
+    line-height: 1;
+    font-weight: 600;
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
+    color: #ffffff;
+    white-space: nowrap;
+  }
+
+  /* Въезд нового: справа (при «вперёд») или слева (при «назад») */
+  .rsc-about__track-title--in-right {
+    animation: rsc-title-in-right 0.35s cubic-bezier(0.22, 0.8, 0.3, 1) 0.18s both;
+  }
+  .rsc-about__track-title--in-left {
+    animation: rsc-title-in-left 0.35s cubic-bezier(0.22, 0.8, 0.3, 1) 0.18s both;
+  }
+
+  /* Выезд старого: влево (при «вперёд») или вправо (при «назад») */
+  .rsc-about__track-title--exit {
+    animation-duration: 0.35s;
+    animation-timing-function: cubic-bezier(0.55, 0, 0.8, 0.4);
+    animation-fill-mode: both;
+  }
+  .rsc-about__track-title--exit-left {
+    animation-name: rsc-title-out-left;
+  }
+  .rsc-about__track-title--exit-right {
+    animation-name: rsc-title-out-right;
+  }
+
+  @keyframes rsc-title-in-right {
+    from { opacity: 0; transform: translateX(48px); }
+    to   { opacity: 1; transform: translateX(0); }
+  }
+  @keyframes rsc-title-in-left {
+    from { opacity: 0; transform: translateX(-48px); }
+    to   { opacity: 1; transform: translateX(0); }
+  }
+  @keyframes rsc-title-out-left {
+    from { opacity: 1; transform: translateX(0); }
+    to   { opacity: 0; transform: translateX(-48px); }
+  }
+  @keyframes rsc-title-out-right {
+    from { opacity: 1; transform: translateX(0); }
+    to   { opacity: 0; transform: translateX(48px); }
+  }
+
+  /* ---------- Прогресс-бар ---------- */
   .rsc-about__progress {
     position: relative;
     max-width: 640px;
@@ -240,30 +361,26 @@ const ABOUT_CSS = `
     margin: 0 auto 36px;
     background: rgba(255, 255, 255, 0.25);
     border-radius: 2px;
-    cursor: pointer;
   }
 
   .rsc-about__progress-fill {
     position: absolute;
     top: 0; left: 0; bottom: 0;
-    background: var(--accent);
+    background: var(--accent, #00c3d0);
     border-radius: 2px;
-    transition: none; /* движение через JS, transition не нужен */
   }
 
-  /* Кружок на полосе прогресса */
   .rsc-about__progress-knob {
     position: absolute;
     top: 50%;
     width: 14px;
     height: 14px;
-    background: var(--accent);
+    background: var(--accent, #00c3d0);
     border-radius: 50%;
     transform: translate(-50%, -50%);
     box-shadow: 0 0 8px rgba(0, 195, 208, 0.6);
   }
 
-  /* Кнопки плеера */
   .rsc-about__controls {
     display: flex;
     align-items: center;
@@ -287,7 +404,7 @@ const ABOUT_CSS = `
   }
 
   .rsc-about__control-btn:hover {
-    color: var(--accent);
+    color: var(--accent, #00c3d0);
     transform: scale(1.1);
   }
 
@@ -300,7 +417,7 @@ const ABOUT_CSS = `
     height: 64px;
   }
 
-  /* Описание — меняется вместе с треком */
+  /* Описание: лёгкая смена с той же разноскоростью */
   .rsc-about__description {
     max-width: 780px;
     margin: 0 auto;
@@ -309,9 +426,14 @@ const ABOUT_CSS = `
     font-weight: 300;
     line-height: 1.75;
     color: #8e8e93;
+    animation: rsc-desc-in 0.5s ease both;
   }
 
-  /* ---------- Мобилка ---------- */
+  @keyframes rsc-desc-in {
+    from { opacity: 0; transform: translateY(10px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
   @media (max-width: 640px) {
     .rsc-about {
       padding: 80px 20px 90px;
