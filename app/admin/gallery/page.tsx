@@ -1,7 +1,9 @@
 // app/admin/gallery/page.tsx
 // Вкладка «Галерея»: список фото с превью.
-// Добавление (загрузка в Supabase Storage), удаление, видимость, drag & drop.
-// Таблица gallery + bucket 'gallery' (public).
+// Фильтр: «Общая галерея» (главная) или конкретная афиша.
+// Загруженное фото привязывается к выбранной афише (poster_id),
+// либо остаётся в общей галерее при «Общая галерея».
+// Удаление, видимость, drag & drop как раньше.
 
 'use client';
 
@@ -16,24 +18,43 @@ type Photo = {
   alt: string | null;
   visible: boolean;
   sort_order: number;
+  poster_id: number | null;
+};
+
+type PosterOption = {
+  id: number;
+  title: string;
+  day: string;
+  month: string;
 };
 
 export default function AdminGalleryPage() {
   const [photos, setPhotos] = useState<Photo[]>([]);
+  const [posters, setPosters] = useState<PosterOption[]>([]);
+  const [filterId, setFilterId] = useState<number | ''>(''); // '' = общая галерея
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [dragIndex, setDragIndex] = useState<number | null>(null);
   const [uploading, setUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState<{ current: number; total: number } | null>(null);
 
-  // Скрытый input для выбора файлов
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  /* ---------- Загрузка списка ---------- */
+  /* ---------- Загрузка списка фото (с учётом фильтра) ---------- */
   const fetchPhotos = useCallback(async () => {
-    const { data, error: fetchError } = await supabase
+    let query = supabase
       .from('gallery')
       .select('*')
       .order('sort_order', { ascending: true });
+
+    // '' = общая галерея (poster_id IS NULL), иначе фото конкретной афиши
+    if (filterId === '') {
+      query = query.is('poster_id', null);
+    } else {
+      query = query.eq('poster_id', filterId);
+    }
+
+    const { data, error: fetchError } = await query;
 
     if (fetchError) {
       setError('Не удалось загрузить фото: ' + fetchError.message);
@@ -41,15 +62,26 @@ export default function AdminGalleryPage() {
       setPhotos(data || []);
     }
     setLoading(false);
+  }, [filterId]);
+
+  /* ---------- Загрузка афиш для выпадающего списка ---------- */
+  useEffect(() => {
+    (async () => {
+      const { data } = await supabase
+        .from('posters')
+        .select('id, title, day, month')
+        .order('sort_order', { ascending: true });
+      setPosters(data || []);
+    })();
   }, []);
 
   useEffect(() => {
+    setLoading(true);
     fetchPhotos();
   }, [fetchPhotos]);
 
   /* ---------- Сохранение порядка ---------- */
   const saveOrder = async (list: Photo[]) => {
-    // Обновляем sort_order у всех строк
     await Promise.all(
       list.map((p, i) =>
         supabase.from('gallery').update({ sort_order: i }).eq('id', p.id)
@@ -57,51 +89,58 @@ export default function AdminGalleryPage() {
     );
   };
 
-  /* ---------- Загрузка файла ---------- */
+  /* ---------- Загрузка файлов (несколько за раз) ---------- */
   const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    // Сбрасываем input, чтобы можно было выбрать тот же файл повторно
-    e.target.value = '';
+    const files = Array.from(e.target.files || []);
+    if (files.length === 0) return;
+    e.target.value = ''; // сбрасываем input, чтобы можно было выбрать те же файлы повторно
 
     setUploading(true);
     setError(null);
+    setUploadProgress({ current: 0, total: files.length });
 
-    // Имя файла: уникальное (timestamp), чтобы не перезаписывать
-    const ext = file.name.split('.').pop();
-    const fileName = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
+    let sortOrder = photos.length;
+    let failed = 0;
 
-    // 1. Грузим файл в Storage
-    const { error: uploadError } = await supabase.storage
-      .from(BUCKET)
-      .upload(fileName, file);
+    // Загружаем по очереди: так видно прогресс и не упираемся в лимиты Storage
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i];
+      setUploadProgress({ current: i + 1, total: files.length });
 
-    if (uploadError) {
-      setError('Ошибка загрузки файла: ' + uploadError.message);
-      setUploading(false);
-      return;
-    }
+      const ext = file.name.split('.').pop();
+      const fileName = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
 
-    // 2. Получаем публичный URL
-    const { data: urlData } = supabase.storage
-      .from(BUCKET)
-      .getPublicUrl(fileName);
+      const { error: uploadError } = await supabase.storage
+        .from(BUCKET)
+        .upload(fileName, file);
 
-    // 3. Создаём запись в таблице
-    const { error: insertError } = await supabase.from('gallery').insert({
-      src: urlData.publicUrl,
-      alt: file.name,
-      sort_order: photos.length,
-    });
+      if (uploadError) {
+        failed++;
+        continue; // пропускаем битый файл, грузим остальные
+      }
 
-    if (insertError) {
-      setError('Ошибка сохранения: ' + insertError.message);
-      setUploading(false);
-      return;
+      const { data: urlData } = supabase.storage
+        .from(BUCKET)
+        .getPublicUrl(fileName);
+
+      // poster_id: null для общей галереи, id афиши для привязки
+      const { error: insertError } = await supabase.from('gallery').insert({
+        src: urlData.publicUrl,
+        alt: file.name,
+        sort_order: sortOrder++,
+        poster_id: filterId === '' ? null : filterId,
+      });
+
+      if (insertError) failed++;
     }
 
     setUploading(false);
+    setUploadProgress(null);
+
+    if (failed > 0) {
+      setError(`Не удалось загрузить ${failed} из ${files.length} файлов`);
+    }
+
     fetchPhotos();
   };
 
@@ -109,7 +148,6 @@ export default function AdminGalleryPage() {
   const remove = async (photo: Photo) => {
     if (!confirm('Удалить фото?')) return;
 
-    // Удаляем запись из таблицы
     const { error: deleteError } = await supabase
       .from('gallery')
       .delete()
@@ -120,7 +158,6 @@ export default function AdminGalleryPage() {
       return;
     }
 
-    // Пытаемся удалить файл из Storage (имя — последний сегмент URL)
     const fileName = photo.src.split('/').pop();
     if (fileName) {
       await supabase.storage.from(BUCKET).remove([fileName]);
@@ -167,28 +204,62 @@ export default function AdminGalleryPage() {
           <button
             className="gl__add-btn"
             onClick={() => fileInputRef.current?.click()}
+            title="Можно выбрать несколько файлов"
             disabled={uploading}
           >
             <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" aria-hidden="true">
               <path d="M12 5v14M5 12h14" />
             </svg>
-            {uploading ? 'Загрузка…' : 'Добавить'}
+            {uploading && uploadProgress
+              ? `Загрузка ${uploadProgress.current}/${uploadProgress.total}…`
+              : 'Добавить'}
           </button>
-          {/* Скрытый input для выбора файла */}
           <input
             ref={fileInputRef}
             type="file"
             accept="image/*"
+            multiple
             hidden
             onChange={handleUpload}
           />
+        </div>
+
+        {/* Фильтр: общая галерея или афиша */}
+        <div className="gl__filter">
+          <label className="gl__filter-label" htmlFor="gl-poster">
+            Раздел:
+          </label>
+          <select
+            id="gl-poster"
+            className="gl__select"
+            value={filterId}
+            onChange={(e) =>
+              setFilterId(e.target.value === '' ? '' : parseInt(e.target.value, 10))
+            }
+          >
+            <option value="">Общая галерея (главная страница)</option>
+            {posters.map((p) => (
+              <option key={p.id} value={p.id}>
+                Афиша: {p.title} ({p.day} {p.month})
+              </option>
+            ))}
+          </select>
+          <p className="gl__filter-hint">
+            {filterId === ''
+              ? 'Фото сюда попадают в галерею на главной странице'
+              : 'Фото сюда попадают в модалку «Подробнее» этой афиши'}
+          </p>
         </div>
 
         {error && <p className="gl__error">{error}</p>}
         {loading && <p className="gl__status">Загрузка…</p>}
 
         {!loading && photos.length === 0 && (
-          <p className="gl__status">Фото пока нет — загрузите первое</p>
+          <p className="gl__status">
+            {filterId === ''
+              ? 'В общей галерее пока нет фото'
+              : 'У этой афиши пока нет фото'}
+          </p>
         )}
 
         {/* Список фото */}
@@ -206,13 +277,11 @@ export default function AdminGalleryPage() {
               onDragOver={(e) => handleDragOver(e, index)}
               onDragEnd={handleDragEnd}
             >
-              {/* Превью */}
               <div className="gl__thumb">
                 <img src={photo.src} alt={photo.alt || 'Фото галереи'} />
               </div>
 
               <div className="gl__controls">
-                {/* Удалить */}
                 <button
                   className="gl__icon-btn"
                   onClick={() => remove(photo)}
@@ -224,7 +293,6 @@ export default function AdminGalleryPage() {
                   </svg>
                 </button>
 
-                {/* Видимость */}
                 <button
                   className="gl__icon-btn"
                   onClick={() => toggleVisible(photo)}
@@ -245,7 +313,6 @@ export default function AdminGalleryPage() {
                   )}
                 </button>
 
-                {/* Рукоятка drag */}
                 <span className="gl__grip" aria-hidden="true">
                   <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor">
                     <circle cx="9" cy="6" r="1.6" /><circle cx="15" cy="6" r="1.6" />
@@ -276,7 +343,7 @@ const GALLERY_CSS = `
     align-items: center;
     justify-content: space-between;
     gap: 16px;
-    margin-bottom: 32px;
+    margin-bottom: 24px;
   }
 
   .gl__title {
@@ -311,6 +378,53 @@ const GALLERY_CSS = `
   .gl__add-btn:disabled {
     opacity: 0.6;
     cursor: default;
+  }
+
+  /* Фильтр по афише */
+  .gl__filter {
+    margin-bottom: 24px;
+    padding: 16px 20px;
+    background: #141414;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 12px;
+  }
+
+  .gl__filter-label {
+    display: block;
+    margin-bottom: 8px;
+    font-family: 'Poppins', sans-serif;
+    font-size: 13px;
+    color: #8e8e93;
+  }
+
+  .gl__select {
+    width: 100%;
+    padding: 12px 14px;
+    font-family: 'Poppins', sans-serif;
+    font-size: 14px;
+    color: #ffffff;
+    background: #060606;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 8px;
+    outline: none;
+    cursor: pointer;
+    transition: border-color 0.2s ease;
+  }
+
+  .gl__select:focus {
+    border-color: var(--accent, #00c3d0);
+  }
+
+  .gl__select option {
+    background: #141414;
+    color: #ffffff;
+  }
+
+  .gl__filter-hint {
+    margin: 8px 0 0;
+    font-family: 'Poppins', sans-serif;
+    font-size: 12px;
+    color: #464646;
   }
 
   .gl__error {

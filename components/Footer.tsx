@@ -4,6 +4,7 @@
 
 import Image from 'next/image';
 import Link from 'next/link';
+import AnchorLink from './AnchorLink';
 
 /* ---------- ДАННЫЕ (позже частично — из админки) ---------- */
 const NAV = [
@@ -83,9 +84,9 @@ export default function Footer() {
           {/* Навигация */}
           <nav className="rsc-footer__nav" aria-label="Навигация в подвале">
             {NAV.map((item) => (
-              <Link key={item.href} href={item.href} className="rsc-footer__link">
+              <AnchorLink key={item.href} href={item.href} className="rsc-footer__link">
                 {item.label}
-              </Link>
+              </AnchorLink>
             ))}
           </nav>
 
@@ -135,7 +136,7 @@ export default function Footer() {
 const FOOTER_CSS = `
   .rsc-footer {
     background: #060606;
-    border-top: 1px solid rgba(255, 255, 255, 0.08);
+    // border-top: 1px solid rgba(255, 255, 255, 0.08);
     padding: 64px 24px 48px;
   }
 
@@ -179,7 +180,7 @@ const FOOTER_CSS = `
   }
 
   .rsc-footer__link:hover {
-    color: var(--accent);
+    color: #00c3d0;
   }
 
   /* Соцсети — белые */
@@ -199,7 +200,7 @@ const FOOTER_CSS = `
 
   .rsc-footer__social:hover {
     transform: translateY(-3px);
-    color: var(--accent);
+    color: #00c3d0;
   }
 
   /* Юридические ссылки */

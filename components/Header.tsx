@@ -42,6 +42,20 @@ export default function Header() {
 
   const closeMenu = () => setIsOpen(false);
 
+  /* Плавный переход к якорю. Работает и при повторном клике на тот же пункт:
+     вместо стандартного поведения браузера (которое игнорирует клик,
+     если hash уже совпадает) всегда делаем scrollIntoView. */
+  const scrollToAnchor = (e: React.MouseEvent, href: string) => {
+    if (!href.startsWith('#')) return; // внешние ссылки — как обычно
+    e.preventDefault();
+    const el = document.querySelector(href);
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+    // Обновляем hash в адресной строке, не дёргая историю и без скачка
+    history.replaceState(null, '', href);
+  };
+
   return (
     <>
       <style>{HEADER_CSS}</style>
@@ -51,7 +65,12 @@ export default function Header() {
           {/* Левая часть навигации */}
           <nav className="rsc-header__nav rsc-header__nav--left" aria-label="Основная навигация">
             {NAV_LEFT.map((item) => (
-              <Link key={item.href} href={item.href} className="rsc-header__link">
+              <Link
+                key={item.href}
+                href={item.href}
+                className="rsc-header__link"
+                onClick={(e) => scrollToAnchor(e, item.href)}
+              >
                 {item.label}
               </Link>
             ))}
@@ -71,7 +90,12 @@ export default function Header() {
           {/* Правая часть навигации */}
           <nav className="rsc-header__nav rsc-header__nav--right" aria-label="Дополнительная навигация">
             {NAV_RIGHT.map((item) => (
-              <Link key={item.href} href={item.href} className="rsc-header__link">
+              <Link
+                key={item.href}
+                href={item.href}
+                className="rsc-header__link"
+                onClick={(e) => scrollToAnchor(e, item.href)}
+              >
                 {item.label}
               </Link>
             ))}
@@ -109,7 +133,11 @@ export default function Header() {
               key={item.href}
               href={item.href}
               className="rsc-mobile-menu__link"
-              onClick={closeMenu}
+              onClick={(e) => {
+                closeMenu();
+                // Даём меню закрыться, затем плавно скроллим к блоку
+                setTimeout(() => scrollToAnchor(e, item.href), 80);
+              }}
               style={{ transitionDelay: isOpen ? `${0.08 + index * 0.05}s` : '0s' }}
             >
               {item.label}
@@ -129,6 +157,8 @@ export default function Header() {
 
 /* Стили вынесены в константу — чтобы не пересоздавать строку на каждый рендер */
 const HEADER_CSS = `
+  html { scroll-behavior: smooth; }
+
   .rsc-header {
     position: fixed;
     top: 0; left: 0; right: 0;
@@ -174,13 +204,13 @@ const HEADER_CSS = `
     left: 0; bottom: 0;
     width: 100%;
     height: 2px;
-    background: var(--accent);
+    background: #00c3d0;
     transform: scaleX(0);
     transform-origin: left;
     transition: transform 0.3s ease;
   }
 
-  .rsc-header__link:hover { color: var(--accent); }
+  .rsc-header__link:hover { color: #00c3d0; }
   .rsc-header__link:hover::after { transform: scaleX(1); }
 
   .rsc-header__logo {
@@ -287,7 +317,7 @@ const HEADER_CSS = `
   }
 
   .rsc-mobile-menu__link:hover,
-  .rsc-mobile-menu__link:active { color: var(--accent); }
+  .rsc-mobile-menu__link:active { color: #00c3d0; }
 
   .rsc-mobile-menu__footer {
     display: flex;

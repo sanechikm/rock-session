@@ -3,6 +3,11 @@
 :root {
   --background: #ffffff;
   --foreground: #171717;
+
+    /* Шрифты */
+  --font-display: 'Tablon', 'Belepotan', system-ui, sans-serif;      /* заголовки */
+  --font-subtitle: 'Belepotan', 'Tablon', system-ui, sans-serif;     /* подзаголовки */
+  --font-body: 'Poppins', system-ui, -apple-system, 'Segoe UI', sans-serif; /* текст */
 }
 
 @theme inline {

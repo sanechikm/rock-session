@@ -1,45 +1,38 @@
 // components/PastEvents.tsx
 // Блок «Отыграли» — архив прошедших концертов. Данные из Supabase.
-// Пагинация по 3, без кнопки покупки.
+// Пагинация по 3 + затемнение + «Посмотреть еще».
+// «Подробнее» открывает ту же модалку события, что и в «Афишах».
 
 'use client';
 
-import { useState, useEffect } from 'react';
-import Link from 'next/link';
+import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
-
-type PastEvent = {
-  id: number;
-  title: string;
-  description: string | null;
-  day: string;
-  month: string;
-  time: string;
-  venue: string | null;
-  slug: string;
-};
+import EventModal, { type EventData } from './EventModal';
 
 const VISIBLE_COUNT = 3;
 
 export default function PastEvents() {
-  const [events, setEvents] = useState<PastEvent[]>([]);
+  const [events, setEvents] = useState<EventData[]>([]);
   const [visibleCount, setVisibleCount] = useState(VISIBLE_COUNT);
   const [loading, setLoading] = useState(true);
+  const [openId, setOpenId] = useState<number | null>(null);
 
   useEffect(() => {
     (async () => {
       const { data } = await supabase
         .from('posters')
-        .select('id, title, description, day, month, time, venue, slug')
+        .select('*')
         .eq('is_past', true)
         .eq('visible', true)
         .order('sort_order', { ascending: true });
-      setEvents(data || []);
+      setEvents((data || []).map((e) => ({ ...e, is_past: true })));
       setLoading(false);
     })();
   }, []);
 
   const hasMore = visibleCount < events.length;
+  const openPoster = events.find((e) => e.id === openId) || null;
+  const close = useCallback(() => setOpenId(null), []);
 
   const showMore = () => {
     setVisibleCount((c) => Math.min(c + VISIBLE_COUNT, events.length));
@@ -79,12 +72,12 @@ export default function PastEvents() {
                     <div className="rsc-past-ticket__footer">
                       <span className="rsc-past-ticket__status">Прошло</span>
                       <div className="rsc-past-ticket__actions">
-                        <Link
-                          href={`/afisha/${event.slug}`}
+                        <button
                           className="rsc-past-ticket__btn"
+                          onClick={() => setOpenId(event.id)}
                         >
                           Подробнее
-                        </Link>
+                        </button>
                       </div>
                     </div>
                   </div>
@@ -109,6 +102,9 @@ export default function PastEvents() {
           )}
         </div>
       </section>
+
+      {/* Модалка прошедшего события */}
+      {openPoster && <EventModal poster={openPoster} onClose={close} />}
     </>
   );
 }
@@ -261,10 +257,10 @@ const PAST_CSS = `
     font-family: 'Poppins', sans-serif;
     font-size: 15px;
     font-weight: 500;
-    text-decoration: none;
     border: 2px solid var(--accent, #00c3d0);
     background: transparent;
     color: var(--accent, #00c3d0);
+    cursor: pointer;
     transition: background 0.25s ease, color 0.25s ease, transform 0.2s ease;
   }
 
@@ -297,11 +293,7 @@ const PAST_CSS = `
 
   .rsc-past-ticket__qr-bars {
     flex: 1.4;
-    background-image: repeating-linear-gradient(
-      0deg,
-      #ffffff 0 2.5px,
-      transparent 2.5px 7px
-    );
+    background-image: repeating-linear-gradient(0deg, #ffffff 0 2.5px, transparent 2.5px 7px);
   }
 
   .rsc-past__fade {
@@ -373,23 +365,16 @@ const PAST_CSS = `
       padding: 22px 24px 14px;
     }
 
-    .rsc-past-ticket__day {
-      font-size: 38px;
-    }
+    .rsc-past-ticket__day { font-size: 38px; }
 
-    .rsc-past-ticket__body {
-      padding: 18px 24px 24px;
-    }
+    .rsc-past-ticket__body { padding: 18px 24px 24px; }
 
     .rsc-past-ticket__footer {
       flex-direction: column;
       align-items: stretch;
     }
 
-    .rsc-past-ticket__btn {
-      width: 100%;
-      min-width: 0;
-    }
+    .rsc-past-ticket__btn { width: 100%; min-width: 0; }
 
     .rsc-past-ticket__qr {
       width: 100%;
@@ -399,8 +384,6 @@ const PAST_CSS = `
       padding: 12px 24px;
     }
 
-    .rsc-past__fade {
-      height: 40%;
-    }
+    .rsc-past__fade { height: 40%; }
   }
 `;

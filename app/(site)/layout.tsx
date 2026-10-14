@@ -4,6 +4,7 @@
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import { supabase } from '@/lib/supabase';
+import ScrollTop from '@/components/ScrollTop';
 
 export const dynamic = 'force-dynamic';
 
@@ -27,6 +28,7 @@ export default async function SiteLayout({ children }: { children: React.ReactNo
       <Header />
       {children}
       <Footer />
+      <ScrollTop />
     </>
   );
 }

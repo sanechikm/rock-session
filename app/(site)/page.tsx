@@ -1,8 +1,11 @@
 // app/(site)/page.tsx
-// Главная страница: блоки рендерятся в порядке из админки,
-// выключенные блоки не показываются.
+// Главная страница: Hero → бегущая строка → блоки из админки
+// (между блоками — «рваные» разделители) → FAQ.
+
+export const dynamic = 'force-dynamic';
 
 import Hero from '@/components/Hero';
+import Marquee from '@/components/Marquee';
 import About from '@/components/About';
 import Posters from '@/components/Posters';
 import PastEvents from '@/components/PastEvents';
@@ -12,9 +15,8 @@ import Gallery from '@/components/Gallery';
 import Videos from '@/components/Videos';
 import Faq from '@/components/Faq';
 import Contacts from '@/components/Contacts';
+import JaggedDivider from '@/components/JaggedDivider';
 import { supabase } from '@/lib/supabase';
-
-export const dynamic = 'force-dynamic';
 
 // Дефолтный порядок блоков (если в базе пусто)
 const DEFAULT_BLOCKS = [
@@ -45,8 +47,27 @@ const BLOCK_COMPONENTS: Record<string, React.ReactNode> = {
   contacts: <Contacts />,
 };
 
-export default async function Home() {
-  // Порядок и видимость блоков из админки
+export default function Home() {
+  return (
+    <main>
+      {/* Hero всегда первым — это обложка сайта, в админке не управляется */}
+      <Hero />
+
+      {/* Бегущая строка после Hero */}
+      <Marquee />
+
+      {/* Остальные блоки — в порядке из админки, только видимые */}
+      <Blocks />
+
+      {/* Разделитель после последнего блока (Контакты) перед FAQ */}
+      <JaggedDivider index={7} />
+
+    </main>
+  );
+}
+
+/* Блоки с «рваными» разделителями между ними */
+async function Blocks() {
   const { data } = await supabase
     .from('settings')
     .select('value')
@@ -54,20 +75,17 @@ export default async function Home() {
     .single();
 
   const blocks = (data?.value as typeof DEFAULT_BLOCKS) || DEFAULT_BLOCKS;
+  const visibleBlocks = blocks.filter((b) => b.visible);
 
   return (
-    <main>
-      {/* Hero всегда первым — это обложка сайта, в админке не управляется */}
-      <Hero />
-
-      {/* Остальные блоки — в порядке из админки, только видимые */}
-      {blocks
-        .filter((b) => b.visible)
-        .map((b) => (
-          <div key={b.id}>{BLOCK_COMPONENTS[b.id]}</div>
-        ))}
-
-      {/* FAQ не входит в список управляемых блоков — показываем всегда */}
-    </main>
+    <>
+      {visibleBlocks.map((b, i) => (
+        <div key={b.id}>
+          {/* Разделитель перед каждым блоком, кроме первого */}
+          {i > 0 && <JaggedDivider index={i - 1} />}
+          {BLOCK_COMPONENTS[b.id]}
+        </div>
+      ))}
+    </>
   );
 }
