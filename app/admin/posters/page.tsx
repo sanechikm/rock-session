@@ -46,7 +46,7 @@ type PosterForm = {
   is_past: boolean;
   imageUrl: string;
   artists: Artist[];
-  partners: string[];
+  partners: CrewMember[];
 };
 
 const EMPTY_FORM: PosterForm = {
