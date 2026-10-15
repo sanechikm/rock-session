@@ -1,14 +1,14 @@
 // components/Faq.tsx
-// Блок «Вопросы и ответы» — аккордеон.
-// При нажатии на вопрос плавно раскрывается ответ.
-// ЗАГЛУШКА: вопросы в PLACEHOLDER_FAQ, позже — редактирование через админку.
+// Блок «Вопросы и ответы» — аккордеон. Данные из Supabase (таблица faq,
+// порядок по sort_order). Если база пуста — подставляются вопросы-заглушки.
 
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
+import { supabase } from '@/lib/supabase';
 
-/* ---------- ЗАГЛУШКА: заменится данными из Supabase ---------- */
-export type FaqItem = {
+/* ---------- Заглушка на случай пустой базы ---------- */
+type FaqItem = {
   id: number;
   question: string;
   answer: string;
@@ -25,13 +25,13 @@ const PLACEHOLDER_FAQ: FaqItem[] = [
     id: 2,
     question: 'Что входит в стоимость билета?',
     answer:
-      'В стоимость билета входит концерт живой музыки, ужин от шеф-повара ресторана и welcome-напиток. Точный состав зависит от формата вечера и указан на странице афиши.',
+      'В стоимость билета входит концерт живой музыки, ужин от шеф-повара площадки и welcome-напиток. Точный состав указан на странице каждого события.',
   },
   {
     id: 3,
     question: 'Можно ли прийти со своими напитками?',
     answer:
-      'Нет, приносить напитки с собой нельзя — в каждой локации работает бар с полной картой напитков. Welcome-напиток уже включён в билет.',
+      'Нет, приносить напитки с собой нельзя — в каждой локации работает бар с полной картой. Welcome-напиток уже включён в билет.',
   },
   {
     id: 4,
@@ -43,7 +43,7 @@ const PLACEHOLDER_FAQ: FaqItem[] = [
     id: 5,
     question: 'Есть ли дресс-код?',
     answer:
-      'Да, на наших вечерах действует smart casual. Мы создаём атмосферу особенного вечера — и внешний вид гостей её часть.',
+      'Да, на наших вечерах действует smart casual. Мы создаём атмосферу особенного вечера — внешний вид гостей её часть.',
   },
   {
     id: 6,
@@ -55,7 +55,7 @@ const PLACEHOLDER_FAQ: FaqItem[] = [
     id: 7,
     question: 'Можно ли купить билет на месте?',
     answer:
-      'Если остаются свободные места — да, за час до начала концерта. Но количество мест ограничено, поэтому рекомендуем покупать билет заранее.',
+      'Если остаются свободные места — да, за час до начала концерта. Но количество мест ограничено, поэтому рекомендуем покупать заранее.',
   },
   {
     id: 8,
@@ -64,34 +64,75 @@ const PLACEHOLDER_FAQ: FaqItem[] = [
       'Напишите нам через форму «Стать партнёром» в разделе «Партнёры» — мы обсудим формат сотрудничества под ваши задачи.',
   },
 ];
-/* ------------------------------------------------------------ */
+/* ----------------------------------------------------- */
 
-export default function Faq({ items = PLACEHOLDER_FAQ }: { items?: FaqItem[] }) {
-  // Какой вопрос открыт (по id). Первый открыт по умолчанию.
-  const [openId, setOpenId] = useState<number | null>(items[0]?.id ?? null);
+export default function Faq() {
+  const [items, setItems] = useState<FaqItem[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [openId, setOpenId] = useState<number | null>(null);
+
+  /* Появление блока при прокрутке */
+  const sectionRef = useRef<HTMLElement>(null);
+  const [inView, setInView] = useState(false);
+
+  useEffect(() => {
+    (async () => {
+      const { data } = await supabase
+        .from('faq')
+        .select('id, question, answer')
+        .eq('visible', true)
+        .order('sort_order', { ascending: true });
+      const list = data && data.length > 0 ? data : PLACEHOLDER_FAQ;
+      setItems(list);
+      setOpenId(list[0]?.id ?? null); /* первый вопрос открыт по умолчанию */
+      setLoading(false);
+    })();
+  }, []);
+
+  useEffect(() => {
+    if (loading) return;
+    const el = sectionRef.current;
+    if (!el) return;
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setInView(true);
+          observer.disconnect();
+        }
+      },
+      { threshold: 0.08 }
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [loading]);
 
   const toggle = (id: number) => {
     setOpenId((current) => (current === id ? null : id));
   };
 
+  if (!loading && items.length === 0) return null;
+
   return (
     <>
       <style>{FAQ_CSS}</style>
 
-      <section className="rsc-faq" id="faq">
+      <section
+        className={'rsc-faq' + (inView ? ' rsc-faq--in' : '')}
+        id="faq"
+        ref={sectionRef}
+      >
         <div className="rsc-faq__inner">
-          {/* Заголовки блока */}
           <h2 className="rsc-faq__heading">Вопросы и ответы</h2>
           <p className="rsc-faq__subheading">Всё, что важно знать о клубе</p>
 
-          {/* Аккордеон */}
           <div className="rsc-faq__list">
-            {items.map((item) => {
+            {items.map((item, index) => {
               const isOpen = openId === item.id;
               return (
                 <div
                   key={item.id}
                   className={'rsc-faq__item' + (isOpen ? ' rsc-faq__item--open' : '')}
+                  style={{ transitionDelay: inView ? `${0.2 + index * 0.06}s` : '0s' }}
                 >
                   <button
                     className="rsc-faq__question"
@@ -100,7 +141,6 @@ export default function Faq({ items = PLACEHOLDER_FAQ }: { items?: FaqItem[] }) 
                     aria-controls={`faq-answer-${item.id}`}
                   >
                     <span className="rsc-faq__question-text">{item.question}</span>
-                    {/* Стрелка */}
                     <span className="rsc-faq__chevron" aria-hidden="true">
                       <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                         <path d="M6 9l6 6 6-6" />
@@ -108,7 +148,6 @@ export default function Faq({ items = PLACEHOLDER_FAQ }: { items?: FaqItem[] }) 
                     </span>
                   </button>
 
-                  {/* Ответ: раскрывается плавно через grid-template-rows */}
                   <div
                     className="rsc-faq__answer"
                     id={`faq-answer-${item.id}`}
@@ -128,11 +167,11 @@ export default function Faq({ items = PLACEHOLDER_FAQ }: { items?: FaqItem[] }) 
   );
 }
 
-/* Стили в константе — проверенный подход */
 const FAQ_CSS = `
   .rsc-faq {
     background: #060606;
     padding: 110px 24px 120px;
+    overflow-x: clip;
   }
 
   .rsc-faq__inner {
@@ -140,13 +179,31 @@ const FAQ_CSS = `
     margin: 0 auto;
   }
 
+  /* ---------- Появление ---------- */
+  .rsc-faq__heading,
+  .rsc-faq__subheading,
+  .rsc-faq__item {
+    transition: opacity 0.6s ease, transform 0.6s cubic-bezier(0.22, 0.8, 0.3, 1);
+  }
+
+  .rsc-faq:not(.rsc-faq--in) .rsc-faq__heading,
+  .rsc-faq:not(.rsc-faq--in) .rsc-faq__subheading,
+  .rsc-faq:not(.rsc-faq--in) .rsc-faq__item {
+    opacity: 0;
+    transform: translateY(24px);
+  }
+
+  .rsc-faq--in .rsc-faq__heading { transition-delay: 0s; }
+  .rsc-faq--in .rsc-faq__subheading { transition-delay: 0.1s; }
+
   .rsc-faq__heading {
     margin: 0 0 10px;
     text-align: center;
-    font-family: 'Tablon', 'Arial Black', sans-serif;
+    font-family: 'Tablon', 'Arial Narrow', 'Arial', sans-serif;
     font-size: clamp(36px, 6vw, 64px);
     line-height: 1;
-    font-weight: 400;
+    font-weight: 600;
+    letter-spacing: 0.03em;
     text-transform: uppercase;
     color: #ffffff;
   }
@@ -158,10 +215,9 @@ const FAQ_CSS = `
     font-size: clamp(17px, 2.2vw, 24px);
     letter-spacing: 0.1em;
     text-transform: uppercase;
-    color: var(--accent);
+    color: var(--accent, #00c3d0);
   }
 
-  /* ---------- АККОРДЕОН ---------- */
   .rsc-faq__list {
     display: flex;
     flex-direction: column;
@@ -175,7 +231,6 @@ const FAQ_CSS = `
     border-top: 1px solid rgba(255, 255, 255, 0.12);
   }
 
-  /* Кнопка-вопрос */
   .rsc-faq__question {
     display: flex;
     align-items: center;
@@ -190,7 +245,6 @@ const FAQ_CSS = `
     transition: padding-left 0.25s ease;
   }
 
-  /* Лёгкий сдвиг вправо при наведении и в открытом состоянии */
   .rsc-faq__question:hover,
   .rsc-faq__item--open .rsc-faq__question {
     padding-left: 12px;
@@ -207,10 +261,9 @@ const FAQ_CSS = `
 
   .rsc-faq__question:hover .rsc-faq__question-text,
   .rsc-faq__item--open .rsc-faq__question-text {
-    color: var(--accent);
+    color: var(--accent, #00c3d0);
   }
 
-  /* Стрелка: поворачивается при открытии */
   .rsc-faq__chevron {
     flex-shrink: 0;
     display: flex;
@@ -222,10 +275,10 @@ const FAQ_CSS = `
 
   .rsc-faq__item--open .rsc-faq__chevron {
     transform: rotate(180deg);
-    color: var(--accent);
+    color: var(--accent, #00c3d0);
   }
 
-  /* Ответ: плавное раскрытие через grid (без фиксированной высоты) */
+  /* Ответ: плавное раскрытие через grid */
   .rsc-faq__answer {
     display: grid;
     grid-template-rows: 0fr;
@@ -236,7 +289,6 @@ const FAQ_CSS = `
     grid-template-rows: 1fr;
   }
 
-  /* Внутренний блок нужен для обрезки контента при 0fr */
   .rsc-faq__answer-inner {
     overflow: hidden;
     min-height: 0;
@@ -261,7 +313,6 @@ const FAQ_CSS = `
     transform: translateY(0);
   }
 
-  /* ---------- Мобилка ---------- */
   @media (max-width: 640px) {
     .rsc-faq {
       padding: 80px 16px 90px;

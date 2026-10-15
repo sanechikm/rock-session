@@ -29,12 +29,13 @@ type Poster = {
   price_to: number | null;
   ticket_url: string | null;
   image: string | null;
+  use_as_hero: boolean | null;
 };
 
 export default async function Hero() {
   const { data: events } = await supabase
     .from('posters')
-    .select('title, description, day, month, time, venue, price_from, price_to, ticket_url, image')
+    .select('title, description, day, month, time, venue, price_from, price_to, ticket_url, image, use_as_hero')
     .eq('is_past', false)
     .eq('visible', true)
     .order('sort_order', { ascending: true });
@@ -48,7 +49,8 @@ export default async function Hero() {
     return t < nt ? p : nearest;
   });
 
-  const bg = event.image || '/hero-bg.jpg';
+  /* Обложка как фон — только если включена галочка у этого события */
+  const bg = event.use_as_hero && event.image ? event.image : '/hero-bg.jpg';
 
   return (
     <>

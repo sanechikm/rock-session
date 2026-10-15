@@ -48,6 +48,57 @@ export default function AdminVideosPage() {
   const [uploadingPreview, setUploadingPreview] = useState(false);
   const previewInputRef = useRef<HTMLInputElement>(null);
 
+  /* Перетаскивание пальцем (touch) */
+  const listRef = useRef<HTMLUListElement>(null);
+  const [touchDrag, setTouchDrag] = useState<number | null>(null);
+  const touchRef = useRef<{
+    index: number;
+    startY: number;
+    active: boolean;
+  } | null>(null);
+
+  const reorder = (from: number, to: number) => {
+    if (from === to) return;
+    const next = [...videos];
+    const [moved] = next.splice(from, 1);
+    next.splice(to, 0, moved);
+    setVideos(next);
+  };
+
+  const handleGripDown = (e: React.PointerEvent, index: number) => {
+    if (e.pointerType !== 'touch') return;
+    e.currentTarget.setPointerCapture(e.pointerId);
+    touchRef.current = { index, startY: e.clientY, active: false };
+  };
+
+  const handleGripMove = (e: React.PointerEvent) => {
+    const t = touchRef.current;
+    if (!t) return;
+    if (!t.active && Math.abs(e.clientY - t.startY) > 14) {
+      t.active = true;
+      setTouchDrag(t.index);
+    }
+    if (!t.active || !listRef.current) return;
+    const rows = Array.from(listRef.current.children) as HTMLElement[];
+    let target = t.index;
+    rows.forEach((row, i) => {
+      const rect = row.getBoundingClientRect();
+      if (e.clientY > rect.top + rect.height / 2) target = i;
+    });
+    if (target !== t.index) {
+      reorder(t.index, target);
+      t.index = target;
+      setTouchDrag(target);
+    }
+  };
+
+  const handleGripUp = () => {
+    const t = touchRef.current;
+    if (t?.active) saveOrder(videos);
+    touchRef.current = null;
+    setTouchDrag(null);
+  };
+
   /* ---------- Загрузка списка ---------- */
   const fetchVideos = useCallback(async () => {
     const { data, error: fetchError } = await supabase
@@ -219,7 +270,10 @@ export default function AdminVideosPage() {
       <div className="vd">
         {/* Шапка */}
         <div className="vd__header">
-          <h1 className="vd__title">Видео</h1>
+          <div>
+            <h1 className="vd__title">Видео</h1>
+            <p className="vd__subtitle">{videos.length} видео в ленте</p>
+          </div>
           <button className="vd__add-btn" onClick={openNew}>
             <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" aria-hidden="true">
               <path d="M12 5v14M5 12h14" />
@@ -236,13 +290,13 @@ export default function AdminVideosPage() {
         )}
 
         {/* Список */}
-        <ul className="vd__list">
+        <ul className="vd__list" ref={listRef}>
           {videos.map((video, index) => (
             <li
               key={video.id}
               className={
                 'vd__row' +
-                (dragIndex === index ? ' vd__row--dragging' : '') +
+                (dragIndex === index || touchDrag === index ? ' vd__row--dragging' : '') +
                 (!video.visible ? ' vd__row--hidden' : '')
               }
               draggable
@@ -300,7 +354,15 @@ export default function AdminVideosPage() {
                 </button>
 
                 {/* Рукоятка */}
-                <span className="vd__grip" aria-hidden="true">
+                <span
+                  className="vd__grip"
+                  aria-hidden="true"
+                  style={{ touchAction: 'none' }}
+                  onPointerDown={(e) => handleGripDown(e, index)}
+                  onPointerMove={handleGripMove}
+                  onPointerUp={handleGripUp}
+                  onPointerCancel={handleGripUp}
+                >
                   <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor">
                     <circle cx="9" cy="6" r="1.6" /><circle cx="15" cy="6" r="1.6" />
                     <circle cx="9" cy="12" r="1.6" /><circle cx="15" cy="12" r="1.6" />
@@ -432,6 +494,12 @@ export default function AdminVideosPage() {
 const VIDEOS_CSS = `
   .vd {
     max-width: 900px;
+    animation: vd-in 0.4s ease;
+  }
+
+  @keyframes vd-in {
+    from { opacity: 0; transform: translateY(12px); }
+    to   { opacity: 1; transform: translateY(0); }
   }
 
   .vd__header {
@@ -439,36 +507,43 @@ const VIDEOS_CSS = `
     align-items: center;
     justify-content: space-between;
     gap: 16px;
-    margin-bottom: 32px;
+    margin-bottom: 24px;
   }
 
   .vd__title {
-    margin: 0;
+    margin: 0 0 4px;
     font-family: 'Poppins', sans-serif;
-    font-size: 28px;
+    font-size: 30px;
     font-weight: 600;
     color: #ffffff;
+  }
+
+  .vd__subtitle {
+    margin: 0;
+    font-family: 'Poppins', sans-serif;
+    font-size: 13px;
+    color: #5a5a5e;
   }
 
   .vd__add-btn {
     display: inline-flex;
     align-items: center;
     gap: 10px;
-    padding: 12px 24px;
+    padding: 12px 22px;
     font-family: 'Poppins', sans-serif;
-    font-size: 15px;
+    font-size: 14px;
     font-weight: 500;
-    color: #ffffff;
-    background: #1e1e1e;
-    border: 1px solid rgba(255, 255, 255, 0.15);
-    border-radius: 10px;
+    color: #060606;
+    background: var(--accent, #00c3d0);
+    border: none;
+    border-radius: 12px;
     cursor: pointer;
-    transition: border-color 0.2s ease, color 0.2s ease;
+    transition: transform 0.2s ease, filter 0.2s ease;
   }
 
   .vd__add-btn:hover {
-    border-color: var(--accent, #00c3d0);
-    color: var(--accent, #00c3d0);
+    transform: translateY(-2px);
+    filter: brightness(1.1);
   }
 
   .vd__error {
@@ -477,37 +552,51 @@ const VIDEOS_CSS = `
     font-family: 'Poppins', sans-serif;
     font-size: 14px;
     color: #ff5a5a;
-    background: rgba(255, 90, 90, 0.1);
+    background: rgba(255, 90, 90, 0.08);
     border: 1px solid rgba(255, 90, 90, 0.3);
-    border-radius: 10px;
+    border-radius: 12px;
   }
 
   .vd__status {
     font-family: 'Poppins', sans-serif;
     font-size: 14px;
-    color: #464646;
+    color: #5a5a5e;
   }
 
   .vd__list {
     margin: 0;
-    padding: 0;
+    padding: 20px;
     list-style: none;
     display: flex;
     flex-direction: column;
-    gap: 12px;
+    gap: 10px;
+    background: #101010;
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    border-radius: 16px;
+    animation: vd-section-in 0.5s cubic-bezier(0.22, 0.8, 0.3, 1) 0.08s both;
+  }
+
+  @keyframes vd-section-in {
+    from { opacity: 0; transform: translateY(14px); }
+    to   { opacity: 1; transform: translateY(0); }
   }
 
   .vd__row {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 20px;
-    padding: 16px 24px;
-    background: #1e1e1e;
-    border: 1px solid transparent;
-    border-radius: 14px;
+    gap: 16px;
+    padding: 14px 16px;
+    background: #181818;
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    border-radius: 12px;
     cursor: grab;
-    transition: border-color 0.2s ease, opacity 0.2s ease;
+    transition: border-color 0.2s ease, opacity 0.2s ease, background 0.2s ease;
+  }
+
+  .vd__row:hover {
+    background: #1c1c1c;
+    border-color: rgba(255, 255, 255, 0.12);
   }
 
   .vd__row:active {
@@ -515,8 +604,14 @@ const VIDEOS_CSS = `
   }
 
   .vd__row--dragging {
+    position: relative;
+    z-index: 5;
     border-color: var(--accent, #00c3d0);
-    opacity: 0.7;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+  }
+
+  .vd__grip {
+    touch-action: none;
   }
 
   .vd__row--hidden .vd__thumb,
@@ -631,17 +726,20 @@ const VIDEOS_CSS = `
     width: min(520px, calc(100vw - 32px));
     max-height: calc(100vh - 64px);
     overflow-y: auto;
+    scrollbar-width: none;
     padding: 36px 32px 28px;
     background: #141414;
-    border: 1px solid rgba(255, 255, 255, 0.12);
-    border-radius: 14px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 18px;
     transform: translate(-50%, -50%);
-    animation: vdm-in 0.25s ease;
+    animation: vdm-in 0.3s cubic-bezier(0.22, 0.9, 0.3, 1);
   }
 
+  .vdm::-webkit-scrollbar { display: none; }
+
   @keyframes vdm-in {
-    from { opacity: 0; transform: translate(-50%, -48%); }
-    to   { opacity: 1; transform: translate(-50%, -50%); }
+    from { opacity: 0; transform: translate(-50%, -47%) scale(0.98); }
+    to   { opacity: 1; transform: translate(-50%, -50%) scale(1); }
   }
 
   .vdm__close {

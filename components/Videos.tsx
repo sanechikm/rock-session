@@ -1,7 +1,7 @@
 // components/Videos.tsx
 // Блок «Видео» — горизонтальная лента с затемнением справа.
-// Данные из Supabase: таблица videos (visible + sort_order из админки).
-// Клик по превью — переход по ссылке на видео.
+// Стрелки с обеих сторон для листания; стрелки гаснут на краях ленты.
+// Данные из Supabase (visible + sort_order из админки).
 
 'use client';
 
@@ -20,7 +20,12 @@ export default function Videos() {
   const [videos, setVideos] = useState<Video[]>([]);
   const [loading, setLoading] = useState(true);
   const trackRef = useRef<HTMLDivElement>(null);
+  const [canScrollLeft, setCanScrollLeft] = useState(false);
   const [canScrollRight, setCanScrollRight] = useState(true);
+
+  /* Появление блока при прокрутке */
+  const sectionRef = useRef<HTMLElement>(null);
+  const [inView, setInView] = useState(false);
 
   useEffect(() => {
     (async () => {
@@ -34,10 +39,28 @@ export default function Videos() {
     })();
   }, []);
 
-  // Проверяем, можно ли листать дальше вправо
+  useEffect(() => {
+    if (loading) return;
+    const el = sectionRef.current;
+    if (!el) return;
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setInView(true);
+          observer.disconnect();
+        }
+      },
+      { threshold: 0.1 }
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [loading]);
+
+  /* Проверяем, можно ли листать в каждую сторону */
   const checkScroll = useCallback(() => {
     const el = trackRef.current;
     if (!el) return;
+    setCanScrollLeft(el.scrollLeft > 8);
     setCanScrollRight(el.scrollLeft + el.clientWidth < el.scrollWidth - 8);
   }, []);
 
@@ -47,10 +70,10 @@ export default function Videos() {
     return () => window.removeEventListener('resize', checkScroll);
   }, [checkScroll, videos]);
 
-  const scrollRight = () => {
+  const scrollBy = (dir: 1 | -1) => {
     const el = trackRef.current;
     if (!el) return;
-    el.scrollBy({ left: el.clientWidth * 0.75, behavior: 'smooth' });
+    el.scrollBy({ left: el.clientWidth * 0.75 * dir, behavior: 'smooth' });
   };
 
   if (!loading && videos.length === 0) return null;
@@ -59,7 +82,11 @@ export default function Videos() {
     <>
       <style>{VIDEOS_CSS}</style>
 
-      <section className="rsc-videos" id="videos">
+      <section
+        className={'rsc-videos' + (inView ? ' rsc-videos--in' : '')}
+        id="videos"
+        ref={sectionRef}
+      >
         <div className="rsc-videos__inner">
           <h2 className="rsc-videos__heading">Видео с наших вечеров</h2>
           <p className="rsc-videos__subheading">Драйв, эмоции и живой звук</p>
@@ -67,8 +94,12 @@ export default function Videos() {
           <div className="rsc-videos__carousel">
             {/* Горизонтальная лента */}
             <div className="rsc-videos__track" ref={trackRef} onScroll={checkScroll}>
-              {videos.map((video) => (
-                <article key={video.id} className="rsc-videos__card">
+              {videos.map((video, i) => (
+                <article
+                  key={video.id}
+                  className="rsc-videos__card"
+                  style={{ transitionDelay: inView ? `${0.2 + i * 0.08}s` : '0s' }}
+                >
                   <a
                     href={video.video_url}
                     className="rsc-videos__preview"
@@ -107,14 +138,29 @@ export default function Videos() {
               ))}
             </div>
 
+            {/* Затемнение справа — пока можно листать дальше */}
             {canScrollRight && (
               <div className="rsc-videos__fade" aria-hidden="true" />
             )}
 
+            {/* Стрелка влево */}
+            {canScrollLeft && (
+              <button
+                className="rsc-videos__arrow rsc-videos__arrow--left"
+                onClick={() => scrollBy(-1)}
+                aria-label="Листать влево"
+              >
+                <svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                  <path d="M19 12H5M11 6l-6 6 6 6" />
+                </svg>
+              </button>
+            )}
+
+            {/* Стрелка вправо */}
             {canScrollRight && (
               <button
-                className="rsc-videos__arrow"
-                onClick={scrollRight}
+                className="rsc-videos__arrow rsc-videos__arrow--right"
+                onClick={() => scrollBy(1)}
                 aria-label="Листать вправо"
               >
                 <svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
@@ -133,6 +179,7 @@ const VIDEOS_CSS = `
   .rsc-videos {
     background: #060606;
     padding: 110px 24px 120px;
+    overflow-x: clip;
   }
 
   .rsc-videos__inner {
@@ -140,13 +187,31 @@ const VIDEOS_CSS = `
     margin: 0 auto;
   }
 
+  /* ---------- Появление ---------- */
+  .rsc-videos__heading,
+  .rsc-videos__subheading,
+  .rsc-videos__card {
+    transition: opacity 0.6s ease, transform 0.6s cubic-bezier(0.22, 0.8, 0.3, 1);
+  }
+
+  .rsc-videos:not(.rsc-videos--in) .rsc-videos__heading,
+  .rsc-videos:not(.rsc-videos--in) .rsc-videos__subheading,
+  .rsc-videos:not(.rsc-videos--in) .rsc-videos__card {
+    opacity: 0;
+    transform: translateY(28px);
+  }
+
+  .rsc-videos--in .rsc-videos__heading { transition-delay: 0s; }
+  .rsc-videos--in .rsc-videos__subheading { transition-delay: 0.1s; }
+
   .rsc-videos__heading {
     margin: 0 0 10px;
     text-align: center;
-    font-family: 'Tablon', 'Arial Black', sans-serif;
+    font-family: 'Tablon', 'Arial Narrow', 'Arial', sans-serif;
     font-size: clamp(36px, 6vw, 64px);
     line-height: 1.05;
-    font-weight: 400;
+    font-weight: 600;
+    letter-spacing: 0.03em;
     text-transform: uppercase;
     color: #ffffff;
   }
@@ -201,7 +266,6 @@ const VIDEOS_CSS = `
     transition: transform 0.4s ease;
   }
 
-  /* Заглушка, если превью нет */
   .rsc-videos__placeholder {
     display: flex;
     align-items: center;
@@ -255,10 +319,11 @@ const VIDEOS_CSS = `
 
   .rsc-videos__title {
     margin: 0;
-    font-family: 'Tablon', 'Arial Black', sans-serif;
+    font-family: 'Tablon', 'Arial Narrow', 'Arial', sans-serif;
     font-size: clamp(17px, 2vw, 22px);
     line-height: 1.2;
-    font-weight: 400;
+    font-weight: 600;
+    letter-spacing: 0.03em;
     text-transform: uppercase;
     color: #ffffff;
   }
@@ -270,6 +335,7 @@ const VIDEOS_CSS = `
     color: #8e8e93;
   }
 
+  /* Затемнение справа */
   .rsc-videos__fade {
     position: absolute;
     top: 0; right: 0; bottom: 8px;
@@ -283,10 +349,10 @@ const VIDEOS_CSS = `
     pointer-events: none;
   }
 
+  /* Стрелки: с обеих сторон */
   .rsc-videos__arrow {
     position: absolute;
     top: 32%;
-    right: 12px;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -298,10 +364,27 @@ const VIDEOS_CSS = `
     border-radius: 50%;
     color: #ffffff;
     cursor: pointer;
-    transition: background 0.25s ease, color 0.25s ease, transform 0.2s ease, border-color 0.25s ease;
+    z-index: 2;
+    transition: background 0.25s ease, color 0.25s ease, transform 0.2s ease,
+      border-color 0.25s ease;
   }
 
-  .rsc-videos__arrow:hover {
+  .rsc-videos__arrow--left {
+    left: 12px;
+  }
+
+  .rsc-videos__arrow--right {
+    right: 12px;
+  }
+
+  .rsc-videos__arrow--left:hover {
+    background: var(--accent, #00c3d0);
+    border-color: var(--accent, #00c3d0);
+    color: #060606;
+    transform: translateX(-3px);
+  }
+
+  .rsc-videos__arrow--right:hover {
     background: var(--accent, #00c3d0);
     border-color: var(--accent, #00c3d0);
     color: #060606;
@@ -325,7 +408,9 @@ const VIDEOS_CSS = `
     .rsc-videos__arrow {
       width: 44px;
       height: 44px;
-      right: 8px;
     }
+
+    .rsc-videos__arrow--left { left: 8px; }
+    .rsc-videos__arrow--right { right: 8px; }
   }
 `;

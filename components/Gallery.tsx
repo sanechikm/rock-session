@@ -1,11 +1,11 @@
 // components/Gallery.tsx
-// Блок «Галерея» — «хоть и ровная, но хаотичная» плитка (masonry через CSS-колонки).
-// Данные из Supabase: таблица gallery (visible + sort_order из админки).
-// Показ по 8, затем по 6; клик — лайтбокс.
+// Блок «Галерея» — плитка (masonry через CSS-колонки): 4 колонки, острые углы,
+// хаотичная высота, фото плавно уходят в затемнение снизу.
+// Данные из Supabase (visible + sort_order из админки).
 
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { supabase } from '@/lib/supabase';
 
 type Photo = {
@@ -14,8 +14,8 @@ type Photo = {
   alt: string | null;
 };
 
-const INITIAL_COUNT = 8;
-const LOAD_STEP = 6;
+const INITIAL_COUNT = 12;
+const LOAD_STEP = 8;
 
 export default function Gallery() {
   const [photos, setPhotos] = useState<Photo[]>([]);
@@ -23,17 +23,57 @@ export default function Gallery() {
   const [lightbox, setLightbox] = useState<Photo | null>(null);
   const [loading, setLoading] = useState(true);
 
+  /* Появление блока при прокрутке */
+  const sectionRef = useRef<HTMLElement>(null);
+  const [inView, setInView] = useState(false);
+
+  /* Количество колонок: 4 на десктопе, 2 на мобильном.
+     Фото распределяются по индексу — колонка каждого фото фиксирована,
+     поэтому подгрузка новых не меняет расстановку. */
+  const [colCount, setColCount] = useState(3);
+
+  useEffect(() => {
+    const mq = window.matchMedia('(max-width: 640px)');
+    const apply = () => setColCount(mq.matches ? 2 : 3);
+    apply();
+    mq.addEventListener('change', apply);
+    return () => mq.removeEventListener('change', apply);
+  }, []);
+
+  const visiblePhotos = photos.slice(0, visibleCount);
+  const columns = Array.from({ length: colCount }, (_, c) =>
+    visiblePhotos.filter((_, i) => i % colCount === c)
+  );
+
   useEffect(() => {
     (async () => {
       const { data } = await supabase
         .from('gallery')
         .select('id, src, alt')
         .eq('visible', true)
+        .is('poster_id', null) /* только общая галерея (без привязки к афишам) */
         .order('sort_order', { ascending: true });
       setPhotos(data || []);
       setLoading(false);
     })();
   }, []);
+
+  useEffect(() => {
+    if (loading) return;
+    const el = sectionRef.current;
+    if (!el) return;
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setInView(true);
+          observer.disconnect();
+        }
+      },
+      { threshold: 0.06 }
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [loading]);
 
   const hasMore = visibleCount < photos.length;
 
@@ -47,7 +87,11 @@ export default function Gallery() {
     <>
       <style>{GALLERY_CSS}</style>
 
-      <section className="rsc-gallery" id="gallery">
+      <section
+        className={'rsc-gallery' + (inView ? ' rsc-gallery--in' : '')}
+        id="gallery"
+        ref={sectionRef}
+      >
         <div className="rsc-gallery__inner">
           <h2 className="rsc-gallery__heading">Галерея</h2>
           <p className="rsc-gallery__subheading">
@@ -55,26 +99,36 @@ export default function Gallery() {
           </p>
 
           <div className="rsc-gallery__grid-wrap">
+            {/* Колонки распределяются вручную: при подгрузке новых фото
+                расстановка существующих не меняется */}
             <div className="rsc-gallery__grid">
-              {photos.slice(0, visibleCount).map((photo) => (
-                <button
-                  key={photo.id}
-                  className="rsc-gallery__item"
-                  onClick={() => setLightbox(photo)}
-                  aria-label="Открыть фото"
-                >
-                  <img
-                    src={photo.src}
-                    alt={photo.alt || 'Фото с мероприятия RockSession Club'}
-                    className="rsc-gallery__img"
-                    loading="lazy"
-                  />
-                  <span className="rsc-gallery__hover" aria-hidden="true" />
-                </button>
+              {columns.map((col, c) => (
+                <div className="rsc-gallery__col" key={c}>
+                  {col.map((photo, i) => {
+                    const globalIndex = c + i * columns.length;
+                    return (
+                      <button
+                        key={photo.id}
+                        className="rsc-gallery__item"
+                        onClick={() => setLightbox(photo)}
+                        aria-label="Открыть фото"
+                        style={{
+                          transitionDelay: inView ? `${0.15 + globalIndex * 0.05}s` : '0s',
+                        }}
+                      >
+                        <img
+                          src={photo.src}
+                          alt={photo.alt || 'Фото с мероприятия RockSession Club'}
+                          className="rsc-gallery__img"
+                          loading="lazy"
+                        />
+                        <span className="rsc-gallery__hover" aria-hidden="true" />
+                      </button>
+                    );
+                  })}
+                </div>
               ))}
             </div>
-
-            {hasMore && <div className="rsc-gallery__fade" aria-hidden="true" />}
           </div>
 
           {hasMore && (
@@ -117,26 +171,45 @@ const GALLERY_CSS = `
   .rsc-gallery {
     background: #060606;
     padding: 110px 24px 120px;
+    overflow-x: clip;
   }
 
   .rsc-gallery__inner {
-    max-width: 1180px;
+    max-width: 1000px;
     margin: 0 auto;
   }
+
+  /* ---------- Появление ---------- */
+  .rsc-gallery__heading,
+  .rsc-gallery__subheading,
+  .rsc-gallery__item {
+    transition: opacity 0.55s ease, transform 0.55s cubic-bezier(0.22, 0.8, 0.3, 1);
+  }
+
+  .rsc-gallery:not(.rsc-gallery--in) .rsc-gallery__heading,
+  .rsc-gallery:not(.rsc-gallery--in) .rsc-gallery__subheading,
+  .rsc-gallery:not(.rsc-gallery--in) .rsc-gallery__item {
+    opacity: 0;
+    transform: translateY(24px);
+  }
+
+  .rsc-gallery--in .rsc-gallery__heading { transition-delay: 0s; }
+  .rsc-gallery--in .rsc-gallery__subheading { transition-delay: 0.1s; }
 
   .rsc-gallery__heading {
     margin: 0 0 10px;
     text-align: center;
-    font-family: 'Tablon', 'Arial Black', sans-serif;
+    font-family: 'Tablon', 'Arial Narrow', 'Arial', sans-serif;
     font-size: clamp(36px, 6vw, 64px);
     line-height: 1;
-    font-weight: 400;
+    font-weight: 600;
+    letter-spacing: 0.03em;
     text-transform: uppercase;
     color: #ffffff;
   }
 
   .rsc-gallery__subheading {
-    margin: 0 0 64px;
+    margin: 0 0 56px;
     text-align: center;
     font-family: 'Belepotan', 'Poppins', sans-serif;
     font-size: clamp(17px, 2.2vw, 24px);
@@ -149,24 +222,34 @@ const GALLERY_CSS = `
     position: relative;
   }
 
+  /* ---------- Плитка: колонки фиксированы, острые углы ---------- */
   .rsc-gallery__grid {
-    column-count: 3;
-    column-gap: 16px;
+    display: flex;
+    align-items: flex-start;
+    gap: 14px;
+  }
+
+  .rsc-gallery__col {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    /* Каждая колонка плавно растворяется ровно по своему низу —
+       никаких пустот и обрывов в затемнении */
+    -webkit-mask-image: linear-gradient(to bottom, #000 62%, transparent 99%);
+    mask-image: linear-gradient(to bottom, #000 62%, transparent 99%);
   }
 
   .rsc-gallery__item {
     position: relative;
     display: block;
     width: 100%;
-    margin: 0 0 16px;
     padding: 0;
     background: #141414;
-    border: none;
-    border-radius: 6px;
+    border: none; /* острые углы */
     overflow: hidden;
     cursor: zoom-in;
-    break-inside: avoid;
-    -webkit-column-break-inside: avoid;
   }
 
   .rsc-gallery__img {
@@ -179,7 +262,7 @@ const GALLERY_CSS = `
   .rsc-gallery__hover {
     position: absolute;
     inset: 0;
-    background: linear-gradient(to top, rgba(0, 195, 208, 0.25), transparent 55%);
+    background: linear-gradient(to top, color-mix(in srgb, var(--accent, #00c3d0) 22%, transparent), transparent 55%);
     opacity: 0;
     transition: opacity 0.3s ease;
     pointer-events: none;
@@ -193,22 +276,10 @@ const GALLERY_CSS = `
     transform: scale(1.04);
   }
 
-  .rsc-gallery__fade {
-    position: absolute;
-    left: 0; right: 0; bottom: 0;
-    height: 45%;
-    background: linear-gradient(
-      to bottom,
-      rgba(6, 6, 6, 0) 0%,
-      rgba(6, 6, 6, 0.75) 60%,
-      #060606 100%
-    );
-    pointer-events: none;
-  }
 
   .rsc-gallery__more {
     position: relative;
-    margin-top: -70px;
+    margin-top: -50px;
     text-align: center;
     z-index: 1;
   }
@@ -260,7 +331,6 @@ const GALLERY_CSS = `
     max-width: 100%;
     max-height: 100%;
     object-fit: contain;
-    border-radius: 6px;
     cursor: default;
     animation: rsc-lb-zoom 0.25s ease;
   }
@@ -291,24 +361,15 @@ const GALLERY_CSS = `
     color: var(--accent, #00c3d0);
   }
 
-  @media (max-width: 900px) {
-    .rsc-gallery__grid {
-      column-count: 2;
-    }
-  }
-
-  @media (max-width: 560px) {
+  /* ---------- Адаптив ---------- */
+  @media (max-width: 640px) {
     .rsc-gallery {
       padding: 80px 16px 90px;
     }
 
-    .rsc-gallery__grid {
-      column-gap: 10px;
-    }
-
-    .rsc-gallery__item {
-      margin-bottom: 10px;
-      border-radius: 4px;
+    .rsc-gallery__grid,
+    .rsc-gallery__col {
+      gap: 10px;
     }
   }
 `;

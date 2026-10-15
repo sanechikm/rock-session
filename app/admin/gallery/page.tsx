@@ -40,6 +40,57 @@ export default function AdminGalleryPage() {
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  /* Перетаскивание пальцем (touch) */
+  const listRef = useRef<HTMLUListElement>(null);
+  const [touchDrag, setTouchDrag] = useState<number | null>(null);
+  const touchRef = useRef<{
+    index: number;
+    startY: number;
+    active: boolean;
+  } | null>(null);
+
+  const reorder = (from: number, to: number) => {
+    if (from === to) return;
+    const next = [...photos];
+    const [moved] = next.splice(from, 1);
+    next.splice(to, 0, moved);
+    setPhotos(next);
+  };
+
+  const handleGripDown = (e: React.PointerEvent, index: number) => {
+    if (e.pointerType !== 'touch') return;
+    e.currentTarget.setPointerCapture(e.pointerId); /* события идут, даже если палец соскользнул */
+    touchRef.current = { index, startY: e.clientY, active: false };
+  };
+
+  const handleGripMove = (e: React.PointerEvent) => {
+    const t = touchRef.current;
+    if (!t) return;
+    if (!t.active && Math.abs(e.clientY - t.startY) > 14) {
+      t.active = true;
+      setTouchDrag(t.index);
+    }
+    if (!t.active || !listRef.current) return;
+    const rows = Array.from(listRef.current.children) as HTMLElement[];
+    let target = t.index;
+    rows.forEach((row, i) => {
+      const rect = row.getBoundingClientRect();
+      if (e.clientY > rect.top + rect.height / 2) target = i;
+    });
+    if (target !== t.index) {
+      reorder(t.index, target);
+      t.index = target;
+      setTouchDrag(target);
+    }
+  };
+
+  const handleGripUp = () => {
+    const t = touchRef.current;
+    if (t?.active) saveOrder(photos);
+    touchRef.current = null;
+    setTouchDrag(null);
+  };
+
   /* ---------- Загрузка списка фото (с учётом фильтра) ---------- */
   const fetchPhotos = useCallback(async () => {
     let query = supabase
@@ -200,7 +251,13 @@ export default function AdminGalleryPage() {
       <div className="gl">
         {/* Шапка */}
         <div className="gl__header">
-          <h1 className="gl__title">Фото</h1>
+          <div>
+            <h1 className="gl__title">Фото</h1>
+            <p className="gl__subtitle">
+              {filterId === '' ? 'Общая галерея' : 'Фото афиши'} · {photos.length}{' '}
+              {photos.length === 1 ? 'фото' : 'фото'}
+            </p>
+          </div>
           <button
             className="gl__add-btn"
             onClick={() => fileInputRef.current?.click()}
@@ -263,13 +320,13 @@ export default function AdminGalleryPage() {
         )}
 
         {/* Список фото */}
-        <ul className="gl__list">
+        <ul className="gl__list" ref={listRef}>
           {photos.map((photo, index) => (
             <li
               key={photo.id}
               className={
                 'gl__row' +
-                (dragIndex === index ? ' gl__row--dragging' : '') +
+                (dragIndex === index || touchDrag === index ? ' gl__row--dragging' : '') +
                 (!photo.visible ? ' gl__row--hidden' : '')
               }
               draggable
@@ -313,7 +370,15 @@ export default function AdminGalleryPage() {
                   )}
                 </button>
 
-                <span className="gl__grip" aria-hidden="true">
+                <span
+                  className="gl__grip"
+                  aria-hidden="true"
+                  style={{ touchAction: 'none' }}
+                  onPointerDown={(e) => handleGripDown(e, index)}
+                  onPointerMove={handleGripMove}
+                  onPointerUp={handleGripUp}
+                  onPointerCancel={handleGripUp}
+                >
                   <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor">
                     <circle cx="9" cy="6" r="1.6" /><circle cx="15" cy="6" r="1.6" />
                     <circle cx="9" cy="12" r="1.6" /><circle cx="15" cy="12" r="1.6" />
@@ -336,6 +401,12 @@ export default function AdminGalleryPage() {
 const GALLERY_CSS = `
   .gl {
     max-width: 900px;
+    animation: gl-in 0.4s ease;
+  }
+
+  @keyframes gl-in {
+    from { opacity: 0; transform: translateY(12px); }
+    to   { opacity: 1; transform: translateY(0); }
   }
 
   .gl__header {
@@ -347,32 +418,39 @@ const GALLERY_CSS = `
   }
 
   .gl__title {
-    margin: 0;
+    margin: 0 0 4px;
     font-family: 'Poppins', sans-serif;
-    font-size: 28px;
+    font-size: 30px;
     font-weight: 600;
     color: #ffffff;
+  }
+
+  .gl__subtitle {
+    margin: 0;
+    font-family: 'Poppins', sans-serif;
+    font-size: 13px;
+    color: #5a5a5e;
   }
 
   .gl__add-btn {
     display: inline-flex;
     align-items: center;
     gap: 10px;
-    padding: 12px 24px;
+    padding: 12px 22px;
     font-family: 'Poppins', sans-serif;
-    font-size: 15px;
+    font-size: 14px;
     font-weight: 500;
-    color: #ffffff;
-    background: #1e1e1e;
-    border: 1px solid rgba(255, 255, 255, 0.15);
-    border-radius: 10px;
+    color: #060606;
+    background: var(--accent, #00c3d0);
+    border: none;
+    border-radius: 12px;
     cursor: pointer;
-    transition: border-color 0.2s ease, color 0.2s ease;
+    transition: transform 0.2s ease, filter 0.2s ease;
   }
 
   .gl__add-btn:hover:not(:disabled) {
-    border-color: var(--accent, #00c3d0);
-    color: var(--accent, #00c3d0);
+    transform: translateY(-2px);
+    filter: brightness(1.1);
   }
 
   .gl__add-btn:disabled {
@@ -382,11 +460,17 @@ const GALLERY_CSS = `
 
   /* Фильтр по афише */
   .gl__filter {
-    margin-bottom: 24px;
-    padding: 16px 20px;
-    background: #141414;
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    border-radius: 12px;
+    margin-bottom: 20px;
+    padding: 18px 20px;
+    background: #101010;
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    border-radius: 16px;
+    animation: gl-section-in 0.5s cubic-bezier(0.22, 0.8, 0.3, 1) 0.05s both;
+  }
+
+  @keyframes gl-section-in {
+    from { opacity: 0; transform: translateY(14px); }
+    to   { opacity: 1; transform: translateY(0); }
   }
 
   .gl__filter-label {
@@ -399,20 +483,38 @@ const GALLERY_CSS = `
 
   .gl__select {
     width: 100%;
-    padding: 12px 14px;
+    padding: 13px 44px 13px 16px;
     font-family: 'Poppins', sans-serif;
     font-size: 14px;
+    font-weight: 500;
     color: #ffffff;
-    background: #060606;
-    border: 1px solid rgba(255, 255, 255, 0.15);
-    border-radius: 8px;
+    background-color: #181818;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%238e8e93' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 14px center;
+    background-size: 18px;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 12px;
     outline: none;
     cursor: pointer;
-    transition: border-color 0.2s ease;
+    appearance: none;
+    -webkit-appearance: none;
+    transition: border-color 0.2s ease, background-color 0.2s ease;
+  }
+
+  .gl__select:hover {
+    border-color: rgba(255, 255, 255, 0.2);
   }
 
   .gl__select:focus {
     border-color: var(--accent, #00c3d0);
+  }
+
+  /* Выпадающий список опций — тёмный */
+  .gl__select option {
+    background: #141414;
+    color: #ffffff;
+    padding: 10px;
   }
 
   .gl__select option {
@@ -433,24 +535,28 @@ const GALLERY_CSS = `
     font-family: 'Poppins', sans-serif;
     font-size: 14px;
     color: #ff5a5a;
-    background: rgba(255, 90, 90, 0.1);
+    background: rgba(255, 90, 90, 0.08);
     border: 1px solid rgba(255, 90, 90, 0.3);
-    border-radius: 10px;
+    border-radius: 12px;
   }
 
   .gl__status {
     font-family: 'Poppins', sans-serif;
     font-size: 14px;
-    color: #464646;
+    color: #5a5a5e;
   }
 
   .gl__list {
     margin: 0;
-    padding: 0;
+    padding: 20px;
     list-style: none;
     display: flex;
     flex-direction: column;
-    gap: 12px;
+    gap: 10px;
+    background: #101010;
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    border-radius: 16px;
+    animation: gl-section-in 0.5s cubic-bezier(0.22, 0.8, 0.3, 1) 0.12s both;
   }
 
   .gl__row {
@@ -458,12 +564,17 @@ const GALLERY_CSS = `
     align-items: center;
     justify-content: space-between;
     gap: 16px;
-    padding: 16px 24px;
-    background: #1e1e1e;
-    border: 1px solid transparent;
-    border-radius: 14px;
+    padding: 12px 16px;
+    background: #181818;
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    border-radius: 12px;
     cursor: grab;
-    transition: border-color 0.2s ease, opacity 0.2s ease;
+    transition: border-color 0.2s ease, opacity 0.2s ease, background 0.2s ease;
+  }
+
+  .gl__row:hover {
+    background: #1c1c1c;
+    border-color: rgba(255, 255, 255, 0.12);
   }
 
   .gl__row:active {
@@ -471,8 +582,14 @@ const GALLERY_CSS = `
   }
 
   .gl__row--dragging {
+    position: relative;
+    z-index: 5;
     border-color: var(--accent, #00c3d0);
-    opacity: 0.7;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+  }
+
+  .gl__grip {
+    touch-action: none; /* жест на рукоятке не скроллит страницу */
   }
 
   .gl__row--hidden .gl__thumb {

@@ -135,7 +135,7 @@ export default function About() {
           {/* Обложка «альбома» */}
           <div className="rsc-about__cover">
             <Image
-              src="/logo.png"
+              src="/logo_black.png"
               alt="RockSession Club"
               width={140}
               height={140}

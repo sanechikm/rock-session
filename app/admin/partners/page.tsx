@@ -1,15 +1,15 @@
 // app/admin/partners/page.tsx
-// Вкладка «Партнёры».
-// Секция «Заявки»: заявки с сайта (таблица partner_requests),
-//   ✓ — принять (создаёт партнёра и удаляет заявку), ✗ — отклонить.
-// Секция «Партнёры»: CRUD с логотипом (Storage), видимостью и порядком.
+// Вкладка «Партнёры» — три блока:
+// 1. Заявки: заявки с сайта, ✓ — принять (в таблицу данных), ✗ — отклонить.
+// 2. Таблица данных: CRM по партнёрам (куда попадают принятые заявки).
+// 3. На сайте: информационные партнёры — логотипы и названия, видимые на главной.
 
 'use client';
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/lib/supabase';
 
-const BUCKET = 'gallery'; // логотипы — в тот же public bucket
+const BUCKET = 'gallery';
 
 /* ---------- Типы ---------- */
 type Request = {
@@ -20,6 +20,7 @@ type Request = {
   email: string;
   social: string | null;
   comment: string | null;
+  direction: string | null;
   created_at: string;
 };
 
@@ -31,6 +32,7 @@ type Partner = {
   email: string | null;
   social: string | null;
   visible: boolean;
+  show_on_site: boolean;
   sort_order: number;
 };
 
@@ -40,6 +42,7 @@ type PartnerForm = {
   email: string;
   social: string;
   logoUrl: string;
+  show_on_site: boolean;
 };
 
 const EMPTY_FORM: PartnerForm = {
@@ -48,9 +51,9 @@ const EMPTY_FORM: PartnerForm = {
   email: '',
   social: '',
   logoUrl: '',
+  show_on_site: false,
 };
 
-/* Формат даты заявки */
 const formatDateTime = (iso: string) => {
   const d = new Date(iso);
   return d.toLocaleString('ru-RU', {
@@ -69,7 +72,12 @@ export default function AdminPartnersPage() {
   const [error, setError] = useState<string | null>(null);
   const [dragIndex, setDragIndex] = useState<number | null>(null);
 
-  /* Модалка партнёра: null / 'new' / id */
+  /* Перетаскивание пальцем */
+  const listRef = useRef<HTMLUListElement>(null);
+  const [touchDrag, setTouchDrag] = useState<number | null>(null);
+  const touchRef = useRef<{ index: number; startY: number; active: boolean } | null>(null);
+
+  /* Модалка: null / 'new' / id */
   const [modal, setModal] = useState<'new' | number | null>(null);
   const [form, setForm] = useState<PartnerForm>(EMPTY_FORM);
   const [formError, setFormError] = useState<string | null>(null);
@@ -102,7 +110,6 @@ export default function AdminPartnersPage() {
   }, [fetchAll]);
 
   /* ---------- Заявки ---------- */
-  // Принять: создаём партнёра из заявки и удаляем заявку
   const approveRequest = async (req: Request) => {
     const { error: insertError } = await supabase.from('partners').insert({
       name: req.company?.trim() || req.name,
@@ -121,20 +128,62 @@ export default function AdminPartnersPage() {
     fetchAll();
   };
 
-  // Отклонить: удаляем заявку
   const rejectRequest = async (req: Request) => {
     if (!confirm(`Отклонить заявку от «${req.name}»?`)) return;
     await supabase.from('partner_requests').delete().eq('id', req.id);
     fetchAll();
   };
 
-  /* ---------- Партнёры: порядок ---------- */
+  /* ---------- Порядок (таблица данных) ---------- */
   const saveOrder = async (list: Partner[]) => {
     await Promise.all(
       list.map((p, i) =>
         supabase.from('partners').update({ sort_order: i }).eq('id', p.id)
       )
     );
+  };
+
+  const reorder = (from: number, to: number) => {
+    if (from === to) return;
+    const next = [...partners];
+    const [moved] = next.splice(from, 1);
+    next.splice(to, 0, moved);
+    setPartners(next);
+  };
+
+  /* Touch-drag */
+  const handleGripDown = (e: React.PointerEvent, index: number) => {
+    if (e.pointerType !== 'touch') return;
+    e.currentTarget.setPointerCapture(e.pointerId);
+    touchRef.current = { index, startY: e.clientY, active: false };
+  };
+
+  const handleGripMove = (e: React.PointerEvent) => {
+    const t = touchRef.current;
+    if (!t) return;
+    if (!t.active && Math.abs(e.clientY - t.startY) > 14) {
+      t.active = true;
+      setTouchDrag(t.index);
+    }
+    if (!t.active || !listRef.current) return;
+    const rows = Array.from(listRef.current.children) as HTMLElement[];
+    let target = t.index;
+    rows.forEach((row, i) => {
+      const rect = row.getBoundingClientRect();
+      if (e.clientY > rect.top + rect.height / 2) target = i;
+    });
+    if (target !== t.index) {
+      reorder(t.index, target);
+      t.index = target;
+      setTouchDrag(target);
+    }
+  };
+
+  const handleGripUp = () => {
+    const t = touchRef.current;
+    if (t?.active) saveOrder(partners);
+    touchRef.current = null;
+    setTouchDrag(null);
   };
 
   /* ---------- Логотип ---------- */
@@ -178,6 +227,7 @@ export default function AdminPartnersPage() {
       email: partner.email || '',
       social: partner.social || '',
       logoUrl: partner.logo || '',
+      show_on_site: partner.show_on_site ?? false,
     });
     setFormError(null);
     setModal(partner.id);
@@ -193,11 +243,11 @@ export default function AdminPartnersPage() {
   }, [modal]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
-    setForm((f) => ({ ...f, [name]: value }));
+    const { name, value, type, checked } = e.target;
+    setForm((f) => ({ ...f, [name]: type === 'checkbox' ? checked : value }));
   };
 
-  /* ---------- Сохранение партнёра ---------- */
+  /* ---------- Сохранение ---------- */
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setFormError(null);
@@ -212,6 +262,7 @@ export default function AdminPartnersPage() {
       email: form.email.trim() || null,
       social: form.social.trim() || null,
       logo: form.logoUrl.trim() || null,
+      show_on_site: form.show_on_site,
     };
 
     let saveError = null;
@@ -221,10 +272,7 @@ export default function AdminPartnersPage() {
         .insert({ ...record, sort_order: partners.length });
       saveError = error;
     } else {
-      const { error } = await supabase
-        .from('partners')
-        .update(record)
-        .eq('id', modal);
+      const { error } = await supabase.from('partners').update(record).eq('id', modal);
       saveError = error;
     }
 
@@ -239,7 +287,7 @@ export default function AdminPartnersPage() {
     fetchAll();
   };
 
-  /* ---------- Удаление / видимость / drag ---------- */
+  /* ---------- Удаление / видимость / витрина ---------- */
   const removePartner = async (partner: Partner) => {
     if (!confirm(`Удалить партнёра «${partner.name}»?`)) return;
     const { error: deleteError } = await supabase
@@ -250,7 +298,6 @@ export default function AdminPartnersPage() {
       setError('Ошибка удаления: ' + deleteError.message);
       return;
     }
-    // Удаляем логотип из Storage, если он у нас
     if (partner.logo?.includes(`/${BUCKET}/`)) {
       const fileName = partner.logo.split('/').pop();
       if (fileName) await supabase.storage.from(BUCKET).remove([fileName]);
@@ -266,16 +313,22 @@ export default function AdminPartnersPage() {
     fetchAll();
   };
 
+  const toggleShowOnSite = async (partner: Partner) => {
+    await supabase
+      .from('partners')
+      .update({ show_on_site: !partner.show_on_site })
+      .eq('id', partner.id);
+    fetchAll();
+  };
+
+  /* ---------- Desktop drag ---------- */
   const handleDragStart = (index: number) => setDragIndex(index);
 
   const handleDragOver = (e: React.DragEvent, index: number) => {
     e.preventDefault();
     if (dragIndex === null || dragIndex === index) return;
-    const next = [...partners];
-    const [moved] = next.splice(dragIndex, 1);
-    next.splice(index, 0, moved);
+    reorder(dragIndex, index);
     setDragIndex(index);
-    setPartners(next);
   };
 
   const handleDragEnd = () => {
@@ -286,7 +339,7 @@ export default function AdminPartnersPage() {
   if (loading) {
     return (
       <>
-        <style>{PARTNERS_CSS}</style>
+        <style>{CSS}</style>
         <div className="pn">
           <p className="pn__status">Загрузка…</p>
         </div>
@@ -294,16 +347,27 @@ export default function AdminPartnersPage() {
     );
   }
 
+  /* Партнёры, показываемые на главной (витрина) */
+  const sitePartners = partners.filter((p) => p.visible && p.show_on_site && p.logo);
+
   return (
     <>
-      <style>{PARTNERS_CSS}</style>
+      <style>{CSS}</style>
 
       <div className="pn">
-        <h1 className="pn__title">Партнёры</h1>
+        {/* Шапка */}
+        <div className="pn__header">
+          <div>
+            <h1 className="pn__title">Партнёры</h1>
+            <p className="pn__subtitle">
+              {requests.length} заявок · {partners.length} в базе · {sitePartners.length} на сайте
+            </p>
+          </div>
+        </div>
 
         {error && <p className="pn__error">{error}</p>}
 
-        {/* ---------- ЗАЯВКИ ---------- */}
+        {/* ================= 1. ЗАЯВКИ ================= */}
         <section className="pn__section">
           <h2 className="pn__section-title">Заявки</h2>
 
@@ -318,31 +382,29 @@ export default function AdminPartnersPage() {
                       {req.name}
                       {req.company && ` (${req.company})`}
                     </span>
+                    {req.direction && (
+                      <span className="pn__row-direction">{req.direction}</span>
+                    )}
                     <span className="pn__row-line">{req.phone}</span>
                     <span className="pn__row-line">{req.email}</span>
                     {req.social && <span className="pn__row-line">{req.social}</span>}
                     {req.comment && (
                       <span className="pn__row-comment">{req.comment}</span>
                     )}
-                    <span className="pn__row-date">
-                      {formatDateTime(req.created_at)}
-                    </span>
+                    <span className="pn__row-date">{formatDateTime(req.created_at)}</span>
                   </div>
 
                   <div className="pn__request-actions">
-                    {/* Принять */}
                     <button
                       className="pn__round-btn pn__round-btn--ok"
                       onClick={() => approveRequest(req)}
                       aria-label="Принять заявку"
-                      title="Принять — создать партнёра"
+                      title="Принять — в таблицу данных"
                     >
                       <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                         <path d="M4 12.5l5 5L20 6.5" />
                       </svg>
                     </button>
-
-                    {/* Отклонить */}
                     <button
                       className="pn__round-btn pn__round-btn--no"
                       onClick={() => rejectRequest(req)}
@@ -360,12 +422,12 @@ export default function AdminPartnersPage() {
           )}
         </section>
 
-        {/* ---------- ПАРТНЁРЫ ---------- */}
+        {/* ================= 2. ТАБЛИЦА ДАННЫХ ================= */}
         <section className="pn__section">
           <div className="pn__section-header">
-            <h2 className="pn__section-title">Партнёры</h2>
+            <h2 className="pn__section-title">Таблица данных</h2>
             <button className="pn__add-btn" onClick={openNew}>
-              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" aria-hidden="true">
+              <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" aria-hidden="true">
                 <path d="M12 5v14M5 12h14" />
               </svg>
               Добавить
@@ -373,101 +435,143 @@ export default function AdminPartnersPage() {
           </div>
 
           {partners.length === 0 ? (
-            <p className="pn__status">Партнёров пока нет</p>
+            <p className="pn__status">База пуста — добавьте партнёра или примите заявку</p>
           ) : (
-            <ul className="pn__list">
-              {partners.map((partner, index) => (
-                <li
-                  key={partner.id}
-                  className={
-                    'pn__row' +
-                    (dragIndex === index ? ' pn__row--dragging' : '') +
-                    (!partner.visible ? ' pn__row--hidden' : '')
-                  }
-                  draggable
-                  onDragStart={() => handleDragStart(index)}
-                  onDragOver={(e) => handleDragOver(e, index)}
-                  onDragEnd={handleDragEnd}
-                >
-                  {/* Логотип */}
-                  <div className="pn__logo">
-                    {partner.logo ? (
-                      <img src={partner.logo} alt={partner.name} />
-                    ) : (
-                      <span className="pn__logo-placeholder" aria-hidden="true">
-                        <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
-                          <rect x="3" y="3" width="18" height="18" rx="2" />
-                          <circle cx="8.5" cy="8.5" r="1.5" />
-                          <path d="m21 15-4.5-4.5L6 21" />
+            <>
+              {/* Шапка таблицы (десктоп) */}
+              <div className="pn__table-head" aria-hidden="true">
+                <span>Партнёр</span>
+                <span>Телефон</span>
+                <span>Почта</span>
+                <span>Соцсети</span>
+                <span className="pn__table-head-actions">Действия</span>
+              </div>
+
+              <ul className="pn__list" ref={listRef}>
+                {partners.map((partner, index) => (
+                  <li
+                    key={partner.id}
+                    className={
+                      'pn__row pn__table-row' +
+                      (dragIndex === index || touchDrag === index ? ' pn__row--dragging' : '') +
+                      (!partner.visible ? ' pn__row--hidden' : '')
+                    }
+                    draggable
+                    onDragStart={() => handleDragStart(index)}
+                    onDragOver={(e) => handleDragOver(e, index)}
+                    onDragEnd={handleDragEnd}
+                  >
+                    <span className="pn__cell pn__cell--name">
+                      {partner.name}
+                      {partner.show_on_site && <span className="pn__row-badge">на сайте</span>}
+                    </span>
+                    <span className="pn__cell">{partner.phone || '—'}</span>
+                    <span className="pn__cell">{partner.email || '—'}</span>
+                    <span className="pn__cell">{partner.social || '—'}</span>
+
+                    <span className="pn__cell pn__cell--actions">
+                      <button
+                        className={'pn__mini-btn' + (partner.show_on_site ? ' pn__mini-btn--on' : '')}
+                        onClick={() => toggleShowOnSite(partner)}
+                        title={partner.show_on_site ? 'Убрать с главной' : 'Показать на главной (нужен логотип)'}
+                        aria-label="На сайте"
+                      >
+                        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                          <circle cx="12" cy="12" r="9" />
+                          <path d="M3 12h18M12 3c2.5 2.6 3.9 5.7 3.9 9S14.5 18.4 12 21c-2.5-2.6-3.9-5.7-3.9-9S9.5 5.6 12 3z" />
+                        </svg>
+                      </button>
+
+                      <button className="pn__mini-btn" onClick={() => toggleVisible(partner)}
+                        title={partner.visible ? 'Скрыть' : 'Показать'} aria-label="Видимость">
+                        {partner.visible ? (
+                          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
+                            <path d="M2 12s3.5-6.5 10-6.5S22 12 22 12s-3.5 6.5-10 6.5S2 12 2 12z" />
+                            <circle cx="12" cy="12" r="2.8" />
+                          </svg>
+                        ) : (
+                          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                            <path d="M3 3l18 18" />
+                            <path d="M10.6 5.2A10.9 10.9 0 0 1 12 5c6.5 0 10 7 10 7a17 17 0 0 1-3 3.9M6.6 6.6C3.8 8.4 2 12 2 12s3.5 6.5 10 6.5c1.4 0 2.7-.3 3.8-.7" />
+                            <path d="M9.9 9.9a2.8 2.8 0 0 0 4 4" />
+                          </svg>
+                        )}
+                      </button>
+
+                      <button className="pn__mini-btn" onClick={() => openEdit(partner)}
+                        title="Редактировать" aria-label="Редактировать">
+                        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                          <path d="M17 3.5 20.5 7 8.5 19H5v-3.5zM14.5 6l3.5 3.5" />
+                        </svg>
+                      </button>
+
+                      <button className="pn__mini-btn pn__mini-btn--danger" onClick={() => removePartner(partner)}
+                        title="Удалить" aria-label="Удалить">
+                        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                          <path d="M4 7h16M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2M6.5 7l1 12a1 1 0 0 0 1 .9h7a1 1 0 0 0 1-.9l1-12" />
+                        </svg>
+                      </button>
+
+                      <span
+                        className="pn__grip"
+                        aria-hidden="true"
+                        style={{ touchAction: 'none' }}
+                        onPointerDown={(e) => handleGripDown(e, index)}
+                        onPointerMove={handleGripMove}
+                        onPointerUp={handleGripUp}
+                        onPointerCancel={handleGripUp}
+                      >
+                        <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor">
+                          <circle cx="9" cy="6" r="1.5" /><circle cx="15" cy="6" r="1.5" />
+                          <circle cx="9" cy="12" r="1.5" /><circle cx="15" cy="12" r="1.5" />
+                          <circle cx="9" cy="18" r="1.5" /><circle cx="15" cy="18" r="1.5" />
                         </svg>
                       </span>
-                    )}
-                  </div>
-
-                  {/* Инфо */}
-                  <div className="pn__info">
-                    <span className="pn__row-title">{partner.name}</span>
-                    {partner.phone && (
-                      <span className="pn__row-line">{partner.phone}</span>
-                    )}
-                    {partner.email && (
-                      <span className="pn__row-line">{partner.email}</span>
-                    )}
-                    {partner.social && (
-                      <span className="pn__row-line">{partner.social}</span>
-                    )}
-                  </div>
-
-                  {/* Контролы */}
-                  <div className="pn__controls">
-                    <button className="pn__icon-btn" onClick={() => removePartner(partner)} aria-label="Удалить" title="Удалить">
-                      <svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                        <path d="M4 7h16M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2M6.5 7l1 12a1 1 0 0 0 1 .9h7a1 1 0 0 0 1-.9l1-12" />
-                      </svg>
-                    </button>
-
-                    <button className="pn__icon-btn" onClick={() => openEdit(partner)} aria-label="Редактировать" title="Редактировать">
-                      <svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                        <path d="M17 3.5 20.5 7 8.5 19H5v-3.5zM14.5 6l3.5 3.5" />
-                      </svg>
-                    </button>
-
-                    <button
-                      className="pn__icon-btn"
-                      onClick={() => toggleVisible(partner)}
-                      aria-label={partner.visible ? 'Скрыть' : 'Показать'}
-                      title={partner.visible ? 'Скрыть с сайта' : 'Показать на сайте'}
-                    >
-                      {partner.visible ? (
-                        <svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
-                          <path d="M2 12s3.5-6.5 10-6.5S22 12 22 12s-3.5 6.5-10 6.5S2 12 2 12z" />
-                          <circle cx="12" cy="12" r="2.8" />
-                        </svg>
-                      ) : (
-                        <svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                          <path d="M3 3l18 18" />
-                          <path d="M10.6 5.2A10.9 10.9 0 0 1 12 5c6.5 0 10 7 10 7a17 17 0 0 1-3 3.9M6.6 6.6C3.8 8.4 2 12 2 12s3.5 6.5 10 6.5c1.4 0 2.7-.3 3.8-.7" />
-                          <path d="M9.9 9.9a2.8 2.8 0 0 0 4 4" />
-                        </svg>
-                      )}
-                    </button>
-
-                    <span className="pn__grip" aria-hidden="true">
-                      <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor">
-                        <circle cx="9" cy="6" r="1.6" /><circle cx="15" cy="6" r="1.6" />
-                        <circle cx="9" cy="12" r="1.6" /><circle cx="15" cy="12" r="1.6" />
-                        <circle cx="9" cy="18" r="1.6" /><circle cx="15" cy="18" r="1.6" />
-                      </svg>
                     </span>
+                  </li>
+                ))}
+              </ul>
+            </>
+          )}
+        </section>
+
+        {/* ================= 3. НА САЙТЕ (витрина) ================= */}
+        <section className="pn__section">
+          <h2 className="pn__section-title">
+            На главной странице
+            <span className="pn__section-note">логотипы в блоке «Информационные партнёры»</span>
+          </h2>
+
+          {sitePartners.length === 0 ? (
+            <p className="pn__status">
+              Никого. Включите «на сайте» у партнёра с логотипом в таблице данных выше.
+            </p>
+          ) : (
+            <div className="pn__showcase">
+              {sitePartners.map((partner) => (
+                <div key={partner.id} className="pn__showcase-card">
+                  <div className="pn__showcase-logo">
+                    <img src={partner.logo!} alt={partner.name} />
                   </div>
-                </li>
+                  <span className="pn__showcase-name">{partner.name}</span>
+                  <button
+                    className="pn__showcase-remove"
+                    onClick={() => toggleShowOnSite(partner)}
+                    title="Убрать с главной"
+                    aria-label="Убрать с главной"
+                  >
+                    <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" aria-hidden="true">
+                      <path d="M6 6l12 12M18 6L6 18" />
+                    </svg>
+                  </button>
+                </div>
               ))}
-            </ul>
+            </div>
           )}
         </section>
       </div>
 
-      {/* ---------- МОДАЛКА ПАРТНЁРА ---------- */}
+      {/* ================= МОДАЛКА ================= */}
       {modal !== null && (
         <>
           <div className="pnm-overlay" onClick={closeModal} aria-hidden="true" />
@@ -486,101 +590,60 @@ export default function AdminPartnersPage() {
             <form className="pnm__form" onSubmit={handleSubmit} noValidate>
               <div className="pnm__field">
                 <label className="pnm__label" htmlFor="pn-name">Имя / название *</label>
-                <input
-                  id="pn-name"
-                  className="pnm__input"
-                  type="text"
-                  name="name"
-                  value={form.name}
-                  onChange={handleChange}
-                  placeholder="ИП Иванов / Радио Рекорд"
-                />
+                <input id="pn-name" className="pnm__input" type="text" name="name"
+                  value={form.name} onChange={handleChange} placeholder="ИП Иванов / Радио Рекорд" />
               </div>
 
               <div className="pnm__row">
                 <div className="pnm__field">
                   <label className="pnm__label" htmlFor="pn-phone">Телефон</label>
-                  <input
-                    id="pn-phone"
-                    className="pnm__input"
-                    type="tel"
-                    name="phone"
-                    value={form.phone}
-                    onChange={handleChange}
-                    placeholder="+7 (___) ___-__-__"
-                  />
+                  <input id="pn-phone" className="pnm__input" type="tel" name="phone"
+                    value={form.phone} onChange={handleChange} placeholder="+7 (___) ___-__-__" />
                 </div>
                 <div className="pnm__field">
                   <label className="pnm__label" htmlFor="pn-email">Почта</label>
-                  <input
-                    id="pn-email"
-                    className="pnm__input"
-                    type="email"
-                    name="email"
-                    value={form.email}
-                    onChange={handleChange}
-                    placeholder="partner@mail.ru"
-                  />
+                  <input id="pn-email" className="pnm__input" type="email" name="email"
+                    value={form.email} onChange={handleChange} placeholder="partner@mail.ru" />
                 </div>
               </div>
 
               <div className="pnm__field">
                 <label className="pnm__label" htmlFor="pn-social">Соцсети</label>
-                <input
-                  id="pn-social"
-                  className="pnm__input"
-                  type="text"
-                  name="social"
-                  value={form.social}
-                  onChange={handleChange}
-                  placeholder="Ссылка на профиль"
-                />
+                <input id="pn-social" className="pnm__input" type="text" name="social"
+                  value={form.social} onChange={handleChange} placeholder="Ссылка на профиль" />
               </div>
 
-              {/* Логотип */}
+              <label className="pnm__checkbox">
+                <input type="checkbox" name="show_on_site" checked={form.show_on_site}
+                  onChange={handleChange} />
+                Показывать в блоке «Информационные партнёры» на главной
+              </label>
+
               <div className="pnm__field">
                 <span className="pnm__label">Логотип</span>
 
                 {form.logoUrl ? (
                   <div className="pnm__logo-ready">
                     <img src={form.logoUrl} alt="Логотип" />
-                    <button
-                      type="button"
-                      className="pnm__logo-remove"
-                      onClick={() => setForm((f) => ({ ...f, logoUrl: '' }))}
-                    >
+                    <button type="button" className="pnm__logo-remove"
+                      onClick={() => setForm((f) => ({ ...f, logoUrl: '' }))}>
                       Убрать
                     </button>
                   </div>
                 ) : (
                   <div className="pnm__logo-actions">
-                    <button
-                      type="button"
-                      className="pnm__upload-btn"
-                      onClick={() => logoInputRef.current?.click()}
-                      disabled={uploadingLogo}
-                    >
+                    <button type="button" className="pnm__upload-btn"
+                      onClick={() => logoInputRef.current?.click()} disabled={uploadingLogo}>
                       {uploadingLogo ? 'Загрузка…' : 'Загрузить логотип'}
                     </button>
                     <span className="pnm__or">или URL:</span>
-                    <input
-                      className="pnm__input"
-                      type="url"
-                      name="logoUrl"
-                      value={form.logoUrl}
-                      onChange={handleChange}
-                      placeholder="https://…"
-                    />
+                    <input className="pnm__input" type="url" name="logoUrl"
+                      value={form.logoUrl} onChange={handleChange} placeholder="https://…" />
                   </div>
                 )}
 
-                <input
-                  ref={logoInputRef}
-                  type="file"
-                  accept="image/*"
-                  hidden
-                  onChange={handleLogoUpload}
-                />
+                <input ref={logoInputRef} type="file" accept="image/*" hidden
+                  onChange={handleLogoUpload} />
               </div>
 
               {formError && <p className="pnm__error">{formError}</p>}
@@ -596,17 +659,32 @@ export default function AdminPartnersPage() {
   );
 }
 
-const PARTNERS_CSS = `
+const CSS = `
   .pn {
-    max-width: 900px;
+    max-width: 1100px;
+    animation: pn-in 0.4s ease;
   }
 
+  @keyframes pn-in {
+    from { opacity: 0; transform: translateY(12px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  .pn__header { margin-bottom: 28px; }
+
   .pn__title {
-    margin: 0 0 40px;
+    margin: 0 0 4px;
     font-family: 'Poppins', sans-serif;
-    font-size: 28px;
+    font-size: 30px;
     font-weight: 600;
     color: #ffffff;
+  }
+
+  .pn__subtitle {
+    margin: 0;
+    font-family: 'Poppins', sans-serif;
+    font-size: 13px;
+    color: #5a5a5e;
   }
 
   .pn__error {
@@ -615,19 +693,33 @@ const PARTNERS_CSS = `
     font-family: 'Poppins', sans-serif;
     font-size: 14px;
     color: #ff5a5a;
-    background: rgba(255, 90, 90, 0.1);
+    background: rgba(255, 90, 90, 0.08);
     border: 1px solid rgba(255, 90, 90, 0.3);
-    border-radius: 10px;
+    border-radius: 12px;
   }
 
   .pn__status {
     font-family: 'Poppins', sans-serif;
     font-size: 14px;
-    color: #464646;
+    color: #5a5a5e;
   }
 
   .pn__section {
-    margin-bottom: 48px;
+    margin-bottom: 28px;
+    padding: 24px;
+    background: #101010;
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    border-radius: 18px;
+    animation: pn-section-in 0.5s cubic-bezier(0.22, 0.8, 0.3, 1) both;
+  }
+
+  .pn__section:nth-of-type(1) { animation-delay: 0.05s; }
+  .pn__section:nth-of-type(2) { animation-delay: 0.12s; }
+  .pn__section:nth-of-type(3) { animation-delay: 0.19s; }
+
+  @keyframes pn-section-in {
+    from { opacity: 0; transform: translateY(16px); }
+    to   { opacity: 1; transform: translateY(0); }
   }
 
   .pn__section-header {
@@ -635,37 +727,47 @@ const PARTNERS_CSS = `
     align-items: center;
     justify-content: space-between;
     gap: 16px;
-    margin-bottom: 20px;
+    margin-bottom: 18px;
   }
 
   .pn__section-title {
-    margin: 0;
+    display: flex;
+    align-items: baseline;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin: 0 0 18px;
     font-family: 'Poppins', sans-serif;
-    font-size: 20px;
+    font-size: 17px;
     font-weight: 600;
     color: #ffffff;
+  }
+
+  .pn__section-header .pn__section-title { margin: 0; }
+
+  .pn__section-note {
+    font-family: 'Poppins', sans-serif;
+    font-size: 12px;
+    font-weight: 400;
+    color: #5a5a5e;
   }
 
   .pn__add-btn {
     display: inline-flex;
     align-items: center;
     gap: 10px;
-    padding: 12px 24px;
+    padding: 11px 20px;
     font-family: 'Poppins', sans-serif;
-    font-size: 15px;
+    font-size: 13px;
     font-weight: 500;
-    color: #ffffff;
-    background: #1e1e1e;
-    border: 1px solid rgba(255, 255, 255, 0.15);
-    border-radius: 10px;
+    color: #060606;
+    background: var(--accent, #00c3d0);
+    border: none;
+    border-radius: 11px;
     cursor: pointer;
-    transition: border-color 0.2s ease, color 0.2s ease;
+    transition: transform 0.2s ease, filter 0.2s ease;
   }
 
-  .pn__add-btn:hover {
-    border-color: var(--accent, #00c3d0);
-    color: var(--accent, #00c3d0);
-  }
+  .pn__add-btn:hover { transform: translateY(-2px); filter: brightness(1.1); }
 
   .pn__list {
     margin: 0;
@@ -673,110 +775,70 @@ const PARTNERS_CSS = `
     list-style: none;
     display: flex;
     flex-direction: column;
-    gap: 12px;
+    gap: 10px;
   }
 
-  /* Строка */
   .pn__row {
     display: flex;
     align-items: center;
-    gap: 20px;
-    padding: 18px 24px;
-    background: #1e1e1e;
-    border: 1px solid transparent;
-    border-radius: 14px;
+    gap: 18px;
+    padding: 14px 18px;
+    background: #181818;
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    border-radius: 12px;
     cursor: grab;
-    transition: border-color 0.2s ease, opacity 0.2s ease;
+    transition: border-color 0.2s ease, opacity 0.2s ease, background 0.2s ease;
   }
 
-  .pn__row:active {
-    cursor: grabbing;
+  .pn__row:hover {
+    background: #1c1c1c;
+    border-color: rgba(255, 255, 255, 0.12);
   }
 
   .pn__row--dragging {
+    position: relative;
+    z-index: 5;
     border-color: var(--accent, #00c3d0);
-    opacity: 0.7;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
   }
 
-  .pn__row--hidden .pn__row-title,
-  .pn__row--hidden .pn__row-line,
-  .pn__row--hidden .pn__logo {
-    opacity: 0.35;
-  }
+  .pn__grip { touch-action: none; color: #3a3a3a; display: flex; }
+  .pn__row:hover .pn__grip { color: #6a6a6e; }
 
-  /* Заявки не перетаскиваются */
-  .pn__row--request {
-    cursor: default;
-    justify-content: space-between;
-  }
+  /* Заявки */
+  .pn__row--request { cursor: default; justify-content: space-between; }
+  .pn__info { flex: 1; display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+  .pn__row-title { font-family: 'Poppins', sans-serif; font-size: 15px; font-weight: 600; color: #ffffff; }
+  .pn__row-line { font-family: 'Poppins', sans-serif; font-size: 13px; font-weight: 300; color: #8e8e93; }
+  .pn__row-comment { font-family: 'Poppins', sans-serif; font-size: 12px; font-style: italic; color: #8e8e93; margin-top: 4px; }
+  .pn__row-date { font-family: 'Poppins', sans-serif; font-size: 11px; color: #464646; margin-top: 6px; }
 
-  .pn__logo {
-    width: 72px;
-    height: 72px;
-    border-radius: 10px;
-    overflow: hidden;
-    background: #141414;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    flex-shrink: 0;
-    transition: opacity 0.2s ease;
-  }
-
-  .pn__logo img {
-    width: 100%;
-    height: 100%;
-    object-fit: contain;
-    padding: 6px;
-  }
-
-  .pn__logo-placeholder {
-    color: #464646;
-  }
-
-  .pn__info {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-    min-width: 0;
-  }
-
-  .pn__row-title {
+  .pn__row-direction {
+    display: inline-block;
+    align-self: flex-start;
+    margin-top: 2px;
+    padding: 3px 10px;
     font-family: 'Poppins', sans-serif;
-    font-size: 16px;
-    font-weight: 600;
-    color: #ffffff;
+    font-size: 11px;
+    color: #060606;
+    background: var(--accent, #00c3d0);
+    border-radius: 6px;
   }
 
-  .pn__row-line {
+  .pn__row-badge {
+    display: inline-block;
+    margin-left: 8px;
+    padding: 2px 8px;
     font-family: 'Poppins', sans-serif;
-    font-size: 14px;
-    font-weight: 300;
-    color: #8e8e93;
+    font-size: 10px;
+    font-weight: 500;
+    color: #060606;
+    background: var(--accent, #00c3d0);
+    border-radius: 5px;
+    vertical-align: middle;
   }
 
-  .pn__row-comment {
-    font-family: 'Poppins', sans-serif;
-    font-size: 13px;
-    font-style: italic;
-    color: #8e8e93;
-    margin-top: 4px;
-  }
-
-  .pn__row-date {
-    font-family: 'Poppins', sans-serif;
-    font-size: 12px;
-    color: #464646;
-    margin-top: 6px;
-  }
-
-  /* Кнопки заявки: круглые */
-  .pn__request-actions {
-    display: flex;
-    gap: 12px;
-    flex-shrink: 0;
-  }
+  .pn__request-actions { display: flex; gap: 12px; flex-shrink: 0; }
 
   .pn__round-btn {
     display: flex;
@@ -788,38 +850,63 @@ const PARTNERS_CSS = `
     border: none;
     border-radius: 50%;
     cursor: pointer;
-    transition: transform 0.2s ease, opacity 0.2s ease;
+    transition: transform 0.2s ease;
+  }
+  .pn__round-btn:hover { transform: scale(1.1); }
+  .pn__round-btn--ok { background: rgba(52, 199, 89, 0.15); color: #34c759; }
+  .pn__round-btn--no { background: rgba(255, 90, 90, 0.15); color: #ff5a5a; }
+
+  /* Таблица данных */
+  .pn__table-head {
+    display: grid;
+    grid-template-columns: 1.3fr 1fr 1.2fr 1fr auto;
+    gap: 12px;
+    padding: 0 18px 10px;
+    font-family: 'Poppins', sans-serif;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: #5a5a5e;
   }
 
-  .pn__round-btn:hover {
-    transform: scale(1.1);
+  .pn__table-row {
+    display: grid;
+    grid-template-columns: 1.3fr 1fr 1.2fr 1fr auto;
+    gap: 12px;
+    align-items: center;
+    cursor: default;
   }
 
-  .pn__round-btn--ok {
-    background: rgba(52, 199, 89, 0.15);
-    color: #34c759;
+  .pn__cell {
+    font-family: 'Poppins', sans-serif;
+    font-size: 13px;
+    color: #c9c9ce;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    min-width: 0;
   }
 
-  .pn__round-btn--no {
-    background: rgba(255, 90, 90, 0.15);
-    color: #ff5a5a;
+  .pn__cell--name {
+    font-weight: 600;
+    color: #ffffff;
+    white-space: normal;
   }
 
-  /* Иконки партнёров */
-  .pn__controls {
+  .pn__cell--actions {
     display: flex;
     align-items: center;
-    gap: 6px;
-    flex-shrink: 0;
-    margin-left: auto;
+    gap: 4px;
+    justify-content: flex-end;
   }
 
-  .pn__icon-btn {
+  .pn__mini-btn {
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 38px;
-    height: 38px;
+    width: 32px;
+    height: 32px;
     padding: 0;
     background: transparent;
     border: none;
@@ -829,18 +916,80 @@ const PARTNERS_CSS = `
     transition: color 0.2s ease, background 0.2s ease;
   }
 
-  .pn__icon-btn:hover {
-    color: #ffffff;
-    background: rgba(255, 255, 255, 0.08);
+  .pn__mini-btn:hover { color: #ffffff; background: rgba(255, 255, 255, 0.08); }
+  .pn__mini-btn--danger:hover { color: #ff5a5a; background: rgba(255, 90, 90, 0.12); }
+  .pn__mini-btn--on { color: var(--accent, #00c3d0); }
+
+  .pn__row--hidden .pn__cell { opacity: 0.4; }
+
+  /* Витрина на сайте */
+  .pn__showcase {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    gap: 12px;
   }
 
-  .pn__grip {
+  .pn__showcase-card {
+    position: relative;
     display: flex;
-    margin-left: 8px;
-    color: #464646;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    padding: 18px 14px 14px;
+    background: #181818;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 14px;
+    transition: border-color 0.2s ease;
   }
 
-  /* ---------- МОДАЛКА ---------- */
+  .pn__showcase-card:hover { border-color: rgba(255, 255, 255, 0.16); }
+
+  .pn__showcase-logo {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: 64px;
+  }
+
+  .pn__showcase-logo img {
+    max-width: 100%;
+    max-height: 64px;
+    object-fit: contain;
+    filter: grayscale(1) brightness(1.6);
+  }
+
+  .pn__showcase-name {
+    font-family: 'Poppins', sans-serif;
+    font-size: 12px;
+    font-weight: 500;
+    color: #c9c9ce;
+    text-align: center;
+  }
+
+  .pn__showcase-remove {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    padding: 0;
+    background: rgba(255, 90, 90, 0.12);
+    border: none;
+    border-radius: 50%;
+    color: #ff5a5a;
+    cursor: pointer;
+    opacity: 0;
+    transition: opacity 0.2s ease, background 0.2s ease;
+  }
+
+  .pn__showcase-card:hover .pn__showcase-remove { opacity: 1; }
+  .pn__showcase-remove:hover { background: rgba(255, 90, 90, 0.25); }
+
+  /* ---------- Модалка ---------- */
   .pnm-overlay {
     position: fixed;
     inset: 0;
@@ -858,17 +1007,20 @@ const PARTNERS_CSS = `
     width: min(520px, calc(100vw - 32px));
     max-height: calc(100vh - 64px);
     overflow-y: auto;
+    scrollbar-width: none;
     padding: 36px 32px 28px;
     background: #141414;
-    border: 1px solid rgba(255, 255, 255, 0.12);
-    border-radius: 14px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 18px;
     transform: translate(-50%, -50%);
-    animation: pnm-in 0.25s ease;
+    animation: pnm-in 0.3s cubic-bezier(0.22, 0.9, 0.3, 1);
   }
 
+  .pnm::-webkit-scrollbar { display: none; }
+
   @keyframes pnm-in {
-    from { opacity: 0; transform: translate(-50%, -48%); }
-    to   { opacity: 1; transform: translate(-50%, -50%); }
+    from { opacity: 0; transform: translate(-50%, -47%) scale(0.98); }
+    to   { opacity: 1; transform: translate(-50%, -50%) scale(1); }
   }
 
   .pnm__close {
@@ -887,10 +1039,7 @@ const PARTNERS_CSS = `
     cursor: pointer;
     transition: color 0.2s ease;
   }
-
-  .pnm__close:hover {
-    color: #ffffff;
-  }
+  .pnm__close:hover { color: #ffffff; }
 
   .pnm__title {
     margin: 0 0 24px;
@@ -900,29 +1049,13 @@ const PARTNERS_CSS = `
     color: #ffffff;
   }
 
-  .pnm__form {
-    display: flex;
-    flex-direction: column;
-    gap: 16px;
-  }
+  .pnm__form { display: flex; flex-direction: column; gap: 16px; }
 
-  .pnm__row {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 16px;
-  }
+  .pnm__row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
 
-  .pnm__field {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-  }
+  .pnm__field { display: flex; flex-direction: column; gap: 8px; }
 
-  .pnm__label {
-    font-family: 'Poppins', sans-serif;
-    font-size: 13px;
-    color: #8e8e93;
-  }
+  .pnm__label { font-family: 'Poppins', sans-serif; font-size: 13px; color: #8e8e93; }
 
   .pnm__input {
     padding: 12px 14px;
@@ -935,21 +1068,21 @@ const PARTNERS_CSS = `
     outline: none;
     transition: border-color 0.2s ease;
   }
+  .pnm__input:focus { border-color: var(--accent, #00c3d0); }
+  .pnm__input::placeholder { color: #464646; }
 
-  .pnm__input:focus {
-    border-color: var(--accent, #00c3d0);
-  }
-
-  .pnm__input::placeholder {
-    color: #464646;
-  }
-
-  .pnm__logo-ready {
+  .pnm__checkbox {
     display: flex;
     align-items: center;
-    gap: 14px;
+    gap: 10px;
+    font-family: 'Poppins', sans-serif;
+    font-size: 14px;
+    color: #8e8e93;
+    cursor: pointer;
   }
+  .pnm__checkbox input { width: 16px; height: 16px; accent-color: var(--accent, #00c3d0); }
 
+  .pnm__logo-ready { display: flex; align-items: center; gap: 14px; }
   .pnm__logo-ready img {
     width: 72px;
     height: 72px;
@@ -958,7 +1091,6 @@ const PARTNERS_CSS = `
     border-radius: 10px;
     padding: 6px;
   }
-
   .pnm__logo-remove {
     padding: 8px 14px;
     font-family: 'Poppins', sans-serif;
@@ -970,22 +1102,10 @@ const PARTNERS_CSS = `
     cursor: pointer;
     transition: background 0.2s ease;
   }
+  .pnm__logo-remove:hover { background: rgba(255, 90, 90, 0.1); }
 
-  .pnm__logo-remove:hover {
-    background: rgba(255, 90, 90, 0.1);
-  }
-
-  .pnm__logo-actions {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    flex-wrap: wrap;
-  }
-
-  .pnm__logo-actions .pnm__input {
-    flex: 1;
-    min-width: 150px;
-  }
+  .pnm__logo-actions { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .pnm__logo-actions .pnm__input { flex: 1; min-width: 150px; }
 
   .pnm__upload-btn {
     padding: 11px 16px;
@@ -999,28 +1119,11 @@ const PARTNERS_CSS = `
     transition: border-color 0.2s ease;
     white-space: nowrap;
   }
+  .pnm__upload-btn:hover:not(:disabled) { border-color: var(--accent, #00c3d0); }
+  .pnm__upload-btn:disabled { opacity: 0.6; }
+  .pnm__or { font-family: 'Poppins', sans-serif; font-size: 13px; color: #464646; white-space: nowrap; }
 
-  .pnm__upload-btn:hover:not(:disabled) {
-    border-color: var(--accent, #00c3d0);
-  }
-
-  .pnm__upload-btn:disabled {
-    opacity: 0.6;
-  }
-
-  .pnm__or {
-    font-family: 'Poppins', sans-serif;
-    font-size: 13px;
-    color: #464646;
-    white-space: nowrap;
-  }
-
-  .pnm__error {
-    margin: 0;
-    font-family: 'Poppins', sans-serif;
-    font-size: 13px;
-    color: #ff5a5a;
-  }
+  .pnm__error { margin: 0; font-family: 'Poppins', sans-serif; font-size: 13px; color: #ff5a5a; }
 
   .pnm__submit {
     margin-top: 8px;
@@ -1035,20 +1138,21 @@ const PARTNERS_CSS = `
     cursor: pointer;
     transition: opacity 0.2s ease;
   }
+  .pnm__submit:disabled { opacity: 0.6; cursor: default; }
 
-  .pnm__submit:disabled {
-    opacity: 0.6;
-    cursor: default;
+  /* ---------- Адаптив ---------- */
+  @media (max-width: 900px) {
+    .pn__table-head { display: none; }
+    .pn__table-row {
+      grid-template-columns: 1fr;
+      gap: 6px;
+    }
+    .pn__cell--actions { justify-content: flex-start; margin-top: 6px; }
   }
 
   @media (max-width: 640px) {
-    .pnm__row {
-      grid-template-columns: 1fr;
-    }
-
-    .pn__row {
-      padding: 14px 16px;
-      gap: 12px;
-    }
+    .pn__section { padding: 18px 16px; }
+    .pn__row { padding: 12px 14px; gap: 12px; }
+    .pnm__row { grid-template-columns: 1fr; }
   }
 `;

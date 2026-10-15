@@ -101,7 +101,25 @@ export default function Contacts() {
 const CONTACTS_CSS = `
   .rsc-contacts {
     background: #060606;
-    padding: 110px 24px 80px;
+    padding: 110px 24px 140px;
+  }
+
+  /* Каскадное появление при загрузке */
+  .rsc-contacts__heading,
+  .rsc-contacts__subheading,
+  .rsc-contacts__phone-block,
+  .rsc-contacts__socials {
+    animation: rsc-contacts-rise 0.7s cubic-bezier(0.22, 0.8, 0.3, 1) both;
+  }
+
+  .rsc-contacts__heading      { animation-delay: 0.05s; }
+  .rsc-contacts__subheading   { animation-delay: 0.15s; }
+  .rsc-contacts__phone-block  { animation-delay: 0.3s; }
+  .rsc-contacts__socials      { animation-delay: 0.45s; }
+
+  @keyframes rsc-contacts-rise {
+    from { opacity: 0; transform: translateY(26px); }
+    to   { opacity: 1; transform: translateY(0); }
   }
 
   .rsc-contacts__inner {
@@ -115,7 +133,7 @@ const CONTACTS_CSS = `
     font-family: 'Tablon', 'Arial Black', sans-serif;
     font-size: clamp(36px, 6vw, 64px);
     line-height: 1;
-    font-weight: 400;
+    font-weight: 600;
     text-transform: uppercase;
     color: #ffffff;
   }
@@ -126,7 +144,7 @@ const CONTACTS_CSS = `
     font-size: clamp(17px, 2.2vw, 24px);
     letter-spacing: 0.1em;
     text-transform: uppercase;
-    color: var(--accent);
+    color: #00c3d0;
   }
 
   /* Телефон */
@@ -154,7 +172,7 @@ const CONTACTS_CSS = `
   }
 
   .rsc-contacts__phone:hover {
-    color: var(--accent);
+    color: #00c3d0;
   }
 
   /* Соцсети */
@@ -170,7 +188,7 @@ const CONTACTS_CSS = `
     justify-content: center;
     width: 56px;
     height: 56px;
-    color: var(--accent);
+    color: #00c3d0;
     transition: transform 0.25s ease, color 0.25s ease;
   }
 

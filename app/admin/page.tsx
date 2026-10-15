@@ -1,23 +1,22 @@
 // app/admin/page.tsx
-// Вкладка «Настройки»: выбор акцентного цвета (8 вариантов) и
-// управление блоками лендинга — порядок (drag & drop) и видимость.
-// Данные хранятся в Supabase, таблица settings (ключ-значение).
+// Вкладка «Настройки»: акцентный цвет (8 вариантов) и блоки лендинга
+// (порядок + видимость). Данные — в Supabase, таблица settings.
 
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { supabase } from '@/lib/supabase';
 
 /* ---------- 8 акцентных цветов ---------- */
 const ACCENT_COLORS = [
-  { id: 'cyan', value: '#00C3D0' },
-  { id: 'blue', value: '#0A84FF' },
-  { id: 'purple', value: '#7B61FF' },
-  { id: 'pink', value: '#FF2D87' },
-  { id: 'red', value: '#FF3B30' },
-  { id: 'orange', value: '#FF9500' },
-  { id: 'yellow', value: '#FFCC00' },
-  { id: 'green', value: '#34C759' },
+  { id: 'cyan', name: 'Бирюзовый', value: '#00C3D0' },
+  { id: 'blue', name: 'Синий', value: '#0A84FF' },
+  { id: 'purple', name: 'Фиолетовый', value: '#7B61FF' },
+  { id: 'pink', name: 'Розовый', value: '#FF2D87' },
+  { id: 'red', name: 'Красный', value: '#FF3B30' },
+  { id: 'orange', name: 'Оранжевый', value: '#FF9500' },
+  { id: 'yellow', name: 'Жёлтый', value: '#FFCC00' },
+  { id: 'green', name: 'Зелёный', value: '#34C759' },
 ];
 
 /* ---------- Блоки лендинга ---------- */
@@ -34,13 +33,11 @@ const DEFAULT_BLOCKS: LandingBlock[] = [
   { id: 'news', title: 'Новости', visible: true },
   { id: 'gallery', title: 'Галерея', visible: true },
   { id: 'videos', title: 'Видео', visible: true },
-  { id: 'faq', title: 'FAQ', visible: true },
   { id: 'contacts', title: 'Контакты', visible: true },
 ];
 
 const DEFAULT_ACCENT = ACCENT_COLORS[0].value;
 
-/* Ключи записей в таблице settings */
 const KEY_COLOR = 'accent_color';
 const KEY_BLOCKS = 'landing_blocks';
 
@@ -48,11 +45,22 @@ export default function AdminSettingsPage() {
   const [accent, setAccent] = useState<string>(DEFAULT_ACCENT);
   const [blocks, setBlocks] = useState<LandingBlock[]>(DEFAULT_BLOCKS);
   const [dragIndex, setDragIndex] = useState<number | null>(null);
+
+  /* Перетаскивание пальцем (touch): жест начинается с рукоятки */
+  const listRef = useRef<HTMLUListElement>(null);
+  const [touchDrag, setTouchDrag] = useState<number | null>(null);
+  const touchRef = useRef<{
+    index: number;
+    startY: number;
+    dy: number;
+    active: boolean;
+  } | null>(null);
+
   const [saved, setSaved] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  /* ---------- Загрузка настроек из Supabase ---------- */
+  /* ---------- Загрузка ---------- */
   useEffect(() => {
     (async () => {
       const { data, error: fetchError } = await supabase
@@ -66,7 +74,6 @@ export default function AdminSettingsPage() {
         return;
       }
 
-      // Если записей нет — сохраняем дефолтные
       if (!data || data.length === 0) {
         await saveSettings(DEFAULT_ACCENT, DEFAULT_BLOCKS, false);
         setLoading(false);
@@ -81,7 +88,7 @@ export default function AdminSettingsPage() {
     })();
   }, []);
 
-  /* ---------- Сохранение в Supabase ---------- */
+  /* ---------- Сохранение ---------- */
   const saveSettings = async (
     color: string,
     bl: LandingBlock[],
@@ -149,29 +156,99 @@ export default function AdminSettingsPage() {
     saveSettings(accent, next);
   };
 
+  /* ---------- Touch: палец на рукоятке ---------- */
+  const reorder = (from: number, to: number) => {
+    if (from === to) return;
+    const next = [...blocks];
+    const [moved] = next.splice(from, 1);
+    next.splice(to, 0, moved);
+    setBlocks(next);
+  };
+
+  const handleGripDown = (e: React.PointerEvent, index: number) => {
+    if (e.pointerType !== 'touch') return; /* мышь — HTML5 dnd */
+    touchRef.current = { index, startY: e.clientY, dy: 0, active: false };
+  };
+
+  const handleGripMove = (e: React.PointerEvent) => {
+    const t = touchRef.current;
+    if (!t) return;
+    t.dy = e.clientY - t.startY;
+
+    /* Порог: меньше 14px — считаем тапом/скроллом */
+    if (!t.active && Math.abs(t.dy) > 14) {
+      t.active = true;
+      setTouchDrag(t.index);
+    }
+    if (!t.active || !listRef.current) return;
+
+    /* Пункт под пальцем — переставляем в реальном времени */
+    const rows = Array.from(listRef.current.children) as HTMLElement[];
+    let target = t.index;
+    rows.forEach((row, i) => {
+      const rect = row.getBoundingClientRect();
+      if (e.clientY > rect.top + rect.height / 2) target = i;
+    });
+    if (target !== t.index) {
+      reorder(t.index, target);
+      t.index = target;
+      setTouchDrag(target);
+    }
+  };
+
+  const handleGripUp = () => {
+    const t = touchRef.current;
+    if (t?.active) saveSettings(accent, blocks); /* фиксируем порядок */
+    touchRef.current = null;
+    setTouchDrag(null);
+  };
+
   if (loading) {
     return (
       <>
         <style>{SETTINGS_CSS}</style>
         <div className="set">
-          <p className="set__status">Загрузка настроек…</p>
+          <p className="set__loading">Загрузка настроек…</p>
         </div>
       </>
     );
   }
+
+  const activeColorName =
+    ACCENT_COLORS.find((c) => c.value === accent)?.name || 'Пользовательский';
 
   return (
     <>
       <style>{SETTINGS_CSS}</style>
 
       <div className="set">
-        <h1 className="set__title">Настройки</h1>
+        {/* Шапка страницы */}
+        <div className="set__header">
+          <h1 className="set__title">Настройки</h1>
+          <p className="set__subtitle">
+            Оформление и структура главной страницы сайта
+          </p>
+        </div>
 
-        {error && <p className="set__error">{error}</p>}
+        {error && (
+          <div className="set__error">
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
+              <circle cx="12" cy="12" r="9" />
+              <path d="M12 8v5M12 16.5v.5" />
+            </svg>
+            {error}
+          </div>
+        )}
 
-        {/* ---------- Настройка цвета ---------- */}
+        {/* ---------- Секция: цвет ---------- */}
         <section className="set__section">
-          <h2 className="set__section-title">Настройка цвета</h2>
+          <div className="set__section-head">
+            <h2 className="set__section-title">Акцентный цвет</h2>
+            <span className="set__accent-name" style={{ color: accent }}>
+              {activeColorName} · {accent}
+            </span>
+          </div>
+
           <div className="set__colors">
             {ACCENT_COLORS.map((color) => (
               <button
@@ -179,28 +256,52 @@ export default function AdminSettingsPage() {
                 className={'set__color' + (accent === color.value ? ' set__color--active' : '')}
                 style={{ background: color.value }}
                 onClick={() => selectColor(color.value)}
-                aria-label={`Цвет ${color.value}`}
+                aria-label={color.name}
                 aria-pressed={accent === color.value}
-                title={color.value}
-              />
+                title={color.name}
+              >
+                {/* Галочка на выбранном */}
+                <svg
+                  className="set__color-check"
+                  viewBox="0 0 24 24"
+                  width="20"
+                  height="20"
+                  fill="none"
+                  stroke={color.value}
+                  strokeWidth="3"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  aria-hidden="true"
+                >
+                  <path d="M4 12.5l5 5L20 6.5" />
+                </svg>
+              </button>
             ))}
           </div>
+
           <p className="set__hint">
-            Акцентный цвет: <code>{accent}</code>
+            Цвет применяется ко всему сайту и админке сразу после выбора
           </p>
         </section>
 
-        {/* ---------- Блоки ---------- */}
+        {/* ---------- Секция: блоки ---------- */}
         <section className="set__section">
-          <h2 className="set__section-title">Блоки</h2>
+          <div className="set__section-head">
+            <h2 className="set__section-title">Блоки главной страницы</h2>
+            <span className="set__section-note">
+              {blocks.filter((b) => b.visible).length} из {blocks.length} видимы
+            </span>
+          </div>
 
-          <ul className="set__blocks">
+          <ul className="set__blocks" ref={listRef}>
             {blocks.map((block, index) => (
               <li
                 key={block.id}
                 className={
                   'set__block' +
-                  (dragIndex === index ? ' set__block--dragging' : '') +
+                  (dragIndex === index || touchDrag === index
+                    ? ' set__block--dragging'
+                    : '') +
                   (!block.visible ? ' set__block--hidden' : '')
                 }
                 draggable
@@ -208,15 +309,19 @@ export default function AdminSettingsPage() {
                 onDragOver={(e) => handleDragOver(e, index)}
                 onDragEnd={handleDragEnd}
               >
+                <span className="set__block-num">{index + 1}</span>
                 <span className="set__block-title">{block.title}</span>
 
                 <div className="set__block-controls">
                   {/* Видимость */}
                   <button
-                    className="set__icon-btn"
+                    className={
+                      'set__icon-btn' +
+                      (block.visible ? ' set__icon-btn--visible' : ' set__icon-btn--hidden-eye')
+                    }
                     onClick={() => toggleVisible(block.id)}
                     aria-label={block.visible ? 'Скрыть блок' : 'Показать блок'}
-                    title={block.visible ? 'Скрыть' : 'Показать'}
+                    title={block.visible ? 'Скрыть с сайта' : 'Показать на сайте'}
                   >
                     {block.visible ? (
                       <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
@@ -235,33 +340,41 @@ export default function AdminSettingsPage() {
                   {/* Стрелки */}
                   <div className="set__arrows">
                     <button
-                      className="set__icon-btn"
+                      className="set__icon-btn set__icon-btn--sm"
                       onClick={() => move(index, -1)}
                       disabled={index === 0}
                       aria-label="Выше"
                     >
-                      <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                      <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                         <path d="m6 14 6-6 6 6" />
                       </svg>
                     </button>
                     <button
-                      className="set__icon-btn"
+                      className="set__icon-btn set__icon-btn--sm"
                       onClick={() => move(index, 1)}
                       disabled={index === blocks.length - 1}
                       aria-label="Ниже"
                     >
-                      <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                      <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                         <path d="m6 10 6 6 6-6" />
                       </svg>
                     </button>
                   </div>
 
-                  {/* Рукоятка drag */}
-                  <span className="set__grip" aria-hidden="true">
-                    <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor">
-                      <circle cx="9" cy="6" r="1.6" /><circle cx="15" cy="6" r="1.6" />
-                      <circle cx="9" cy="12" r="1.6" /><circle cx="15" cy="12" r="1.6" />
-                      <circle cx="9" cy="18" r="1.6" /><circle cx="15" cy="18" r="1.6" />
+                  {/* Рукоятка */}
+                  <span
+                    className="set__grip"
+                    aria-hidden="true"
+                    style={{ touchAction: 'none' }}
+                    onPointerDown={(e) => handleGripDown(e, index)}
+                    onPointerMove={handleGripMove}
+                    onPointerUp={handleGripUp}
+                    onPointerCancel={handleGripUp}
+                  >
+                    <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor">
+                      <circle cx="9" cy="6" r="1.5" /><circle cx="15" cy="6" r="1.5" />
+                      <circle cx="9" cy="12" r="1.5" /><circle cx="15" cy="12" r="1.5" />
+                      <circle cx="9" cy="18" r="1.5" /><circle cx="15" cy="18" r="1.5" />
                     </svg>
                   </span>
                 </div>
@@ -270,12 +383,20 @@ export default function AdminSettingsPage() {
           </ul>
 
           <p className="set__hint">
-            Перетаскивайте блоки за рукоятку или используйте стрелки. Глаз —
-            включает/выключает блок на главной.
+            Перетаскивайте блоки за рукоятку или стрелками. Глаз — видимость
+            блока на главной странице.
           </p>
         </section>
 
-        {saved && <div className="set__saved">Сохранено ✓</div>}
+        {/* Тост сохранения */}
+        {saved && (
+          <div className="set__saved" role="status">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <path d="M4 12.5l5 5L20 6.5" />
+            </svg>
+            Сохранено
+          </div>
+        )}
       </div>
     </>
   );
@@ -283,90 +404,174 @@ export default function AdminSettingsPage() {
 
 const SETTINGS_CSS = `
   .set {
-    max-width: 860px;
+    max-width: 880px;
+    animation: set-in 0.4s ease;
   }
 
-  .set__title {
-    margin: 0 0 40px;
-    font-family: 'Poppins', sans-serif;
-    font-size: 28px;
-    font-weight: 600;
-    color: #ffffff;
+  @keyframes set-in {
+    from { opacity: 0; transform: translateY(12px); }
+    to   { opacity: 1; transform: translateY(0); }
   }
 
-  .set__status {
+  .set__loading {
     font-family: 'Poppins', sans-serif;
     color: #8e8e93;
   }
 
+  /* ---------- Шапка ---------- */
+  .set__header {
+    margin-bottom: 36px;
+  }
+
+  .set__title {
+    margin: 0 0 6px;
+    font-family: 'Poppins', sans-serif;
+    font-size: 30px;
+    font-weight: 600;
+    color: #ffffff;
+  }
+
+  .set__subtitle {
+    margin: 0;
+    font-family: 'Poppins', sans-serif;
+    font-size: 14px;
+    color: #5a5a5e;
+  }
+
   .set__error {
+    display: flex;
+    align-items: center;
+    gap: 10px;
     padding: 12px 16px;
     margin: 0 0 24px;
     font-family: 'Poppins', sans-serif;
     font-size: 14px;
     color: #ff5a5a;
-    background: rgba(255, 90, 90, 0.1);
+    background: rgba(255, 90, 90, 0.08);
     border: 1px solid rgba(255, 90, 90, 0.3);
-    border-radius: 10px;
+    border-radius: 12px;
   }
 
+  /* ---------- Секции ---------- */
   .set__section {
-    margin-bottom: 48px;
+    margin-bottom: 40px;
+    padding: 28px;
+    background: #101010;
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    border-radius: 18px;
+    animation: set-section-in 0.5s cubic-bezier(0.22, 0.8, 0.3, 1) both;
+  }
+
+  .set__section:nth-of-type(1) { animation-delay: 0.05s; }
+  .set__section:nth-of-type(2) { animation-delay: 0.15s; }
+
+  @keyframes set-section-in {
+    from { opacity: 0; transform: translateY(18px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  .set__section-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-bottom: 22px;
   }
 
   .set__section-title {
-    margin: 0 0 20px;
+    margin: 0;
     font-family: 'Poppins', sans-serif;
     font-size: 18px;
-    font-weight: 500;
+    font-weight: 600;
     color: #ffffff;
   }
 
+  .set__accent-name {
+    font-family: 'Poppins', sans-serif;
+    font-size: 13px;
+    font-weight: 500;
+    letter-spacing: 0.02em;
+  }
+
+  .set__section-note {
+    font-family: 'Poppins', sans-serif;
+    font-size: 13px;
+    color: #5a5a5e;
+  }
+
+  /* ---------- Цвета ---------- */
   .set__colors {
     display: flex;
-    gap: 12px;
+    gap: 14px;
     flex-wrap: wrap;
   }
 
   .set__color {
-    width: 48px;
-    height: 48px;
+    position: relative;
+    width: 52px;
+    height: 52px;
     padding: 0;
-    border: 3px solid transparent;
-    border-radius: 10px;
+    border: none;
+    border-radius: 14px;
     cursor: pointer;
-    transition: transform 0.2s ease, border-color 0.2s ease;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
   }
 
   .set__color:hover {
-    transform: scale(1.08);
+    transform: scale(1.1);
   }
 
+  /* Выбранный: двойное кольцо */
   .set__color--active {
-    border-color: #ffffff;
-    box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.25);
+    box-shadow: 0 0 0 3px #060606, 0 0 0 5px currentColor;
+    transform: scale(1.05);
   }
 
+  .set__color--active:hover {
+    transform: scale(1.12);
+  }
+
+  .set__color-check {
+    position: absolute;
+    inset: 0;
+    margin: auto;
+    opacity: 0;
+    transform: scale(0.5);
+    transition: opacity 0.2s ease, transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+
+  .set__color--active .set__color-check {
+    opacity: 1;
+    transform: scale(1);
+  }
+
+  /* ---------- Блоки ---------- */
   .set__blocks {
     margin: 0;
     padding: 0;
     list-style: none;
     display: flex;
     flex-direction: column;
-    gap: 12px;
+    gap: 10px;
   }
 
   .set__block {
     display: flex;
     align-items: center;
-    justify-content: space-between;
-    gap: 16px;
-    padding: 18px 24px;
-    background: #1e1e1e;
-    border: 1px solid transparent;
+    gap: 14px;
+    padding: 15px 18px;
+    background: #181818;
+    border: 1px solid rgba(255, 255, 255, 0.06);
     border-radius: 14px;
     cursor: grab;
-    transition: border-color 0.2s ease, opacity 0.2s ease;
+    transition: border-color 0.2s ease, opacity 0.2s ease,
+      transform 0.2s ease, background 0.2s ease;
+  }
+
+  .set__block:hover {
+    background: #1c1c1c;
+    border-color: rgba(255, 255, 255, 0.12);
   }
 
   .set__block:active {
@@ -374,17 +579,40 @@ const SETTINGS_CSS = `
   }
 
   .set__block--dragging {
-    border-color: #00c3d0;
-    opacity: 0.7;
+    position: relative;
+    z-index: 5;
+    border-color: var(--accent, #00c3d0);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
   }
 
-  .set__block--hidden .set__block-title {
+  .set__grip {
+    touch-action: none; /* жест на рукоятке не скроллит страницу */
+  }
+
+  .set__block-num {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 26px;
+    height: 26px;
+    flex-shrink: 0;
+    font-family: 'Poppins', sans-serif;
+    font-size: 12px;
+    font-weight: 600;
+    color: #5a5a5e;
+    background: #101010;
+    border-radius: 8px;
+  }
+
+  .set__block--hidden .set__block-title,
+  .set__block--hidden .set__block-num {
     color: #464646;
   }
 
   .set__block-title {
+    flex: 1;
     font-family: 'Poppins', sans-serif;
-    font-size: 16px;
+    font-size: 15px;
     font-weight: 500;
     color: #ffffff;
     transition: color 0.2s ease;
@@ -393,7 +621,7 @@ const SETTINGS_CSS = `
   .set__block-controls {
     display: flex;
     align-items: center;
-    gap: 20px;
+    gap: 14px;
   }
 
   .set__icon-btn {
@@ -405,7 +633,7 @@ const SETTINGS_CSS = `
     padding: 0;
     background: transparent;
     border: none;
-    border-radius: 8px;
+    border-radius: 10px;
     color: #8e8e93;
     cursor: pointer;
     transition: color 0.2s ease, background 0.2s ease;
@@ -417,52 +645,84 @@ const SETTINGS_CSS = `
   }
 
   .set__icon-btn:disabled {
-    opacity: 0.25;
+    opacity: 0.2;
     cursor: default;
+  }
+
+  .set__icon-btn--visible {
+    color: var(--accent, #00c3d0);
+  }
+
+  .set__icon-btn--hidden-eye {
+    color: #464646;
+  }
+
+  .set__icon-btn--sm {
+    width: 30px;
+    height: 26px;
+    border-radius: 7px;
   }
 
   .set__arrows {
     display: flex;
     flex-direction: column;
     gap: 2px;
-  }
-
-  .set__arrows .set__icon-btn {
-    width: 30px;
-    height: 24px;
+    padding: 2px;
+    background: #101010;
+    border-radius: 9px;
   }
 
   .set__grip {
     display: flex;
-    color: #464646;
+    color: #3a3a3a;
+    transition: color 0.2s ease;
   }
 
+  .set__block:hover .set__grip {
+    color: #6a6a6e;
+  }
+
+  /* ---------- Прочее ---------- */
   .set__hint {
     margin: 16px 0 0;
     font-family: 'Poppins', sans-serif;
     font-size: 13px;
-    color: #464646;
-  }
-
-  .set__hint code {
-    color: #00c3d0;
+    line-height: 1.6;
+    color: #5a5a5e;
   }
 
   .set__saved {
     position: fixed;
     bottom: 24px;
     right: 24px;
-    padding: 12px 22px;
+    z-index: 100;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 13px 22px;
     font-family: 'Poppins', sans-serif;
     font-size: 14px;
+    font-weight: 500;
     color: #060606;
-    background: #00c3d0;
-    border-radius: 10px;
-    animation: set-fade 0.25s ease;
+    background: var(--accent, #00c3d0);
+    border-radius: 12px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+    animation: set-toast 0.3s cubic-bezier(0.34, 1.4, 0.64, 1);
   }
 
-  @keyframes set-fade {
-    from { opacity: 0; transform: translateY(8px); }
-    to   { opacity: 1; transform: translateY(0); }
+  @keyframes set-toast {
+    from { opacity: 0; transform: translateY(14px) scale(0.95); }
+    to   { opacity: 1; transform: translateY(0) scale(1); }
+  }
+
+  @media (max-width: 640px) {
+    .set__section {
+      padding: 20px 16px;
+      border-radius: 14px;
+    }
+
+    .set__block {
+      padding: 12px 14px;
+    }
   }
 `;

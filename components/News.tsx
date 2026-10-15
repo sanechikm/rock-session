@@ -1,11 +1,11 @@
 // components/News.tsx
-// Блок «Новости» — прокручиваемая лента с затемнением снизу.
+// Блок «Новости» — лента с общей акцентной линией слева.
 // Данные из Supabase (visible + sort_order из админки).
 // Клик по новости — модальное окно с полным текстом.
 
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { supabase } from '@/lib/supabase';
 
 type NewsItem = {
@@ -23,6 +23,10 @@ export default function News() {
   const [loading, setLoading] = useState(true);
   const [openId, setOpenId] = useState<number | null>(null);
 
+  /* Появление блока при прокрутке */
+  const sectionRef = useRef<HTMLElement>(null);
+  const [inView, setInView] = useState(false);
+
   useEffect(() => {
     (async () => {
       const { data } = await supabase
@@ -34,6 +38,23 @@ export default function News() {
       setLoading(false);
     })();
   }, []);
+
+  useEffect(() => {
+    if (loading) return;
+    const el = sectionRef.current;
+    if (!el) return;
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setInView(true);
+          observer.disconnect();
+        }
+      },
+      { threshold: 0.08 }
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [loading]);
 
   const openItem = items.find((n) => n.id === openId) || null;
 
@@ -59,21 +80,29 @@ export default function News() {
     <>
       <style>{NEWS_CSS}</style>
 
-      <section className="rsc-news" id="news">
+      <section
+        className={'rsc-news' + (inView ? ' rsc-news--in' : '')}
+        id="news"
+        ref={sectionRef}
+      >
         <div className="rsc-news__inner">
           <h2 className="rsc-news__heading">Новости</h2>
           <p className="rsc-news__subheading">Что нового у RockSession</p>
 
           <div className="rsc-news__list-wrap">
+            {/* Лента с общей акцентной линией слева */}
             <ul className="rsc-news__list" style={{ maxHeight: LIST_MAX_HEIGHT }}>
-              {items.map((item) => (
-                <li key={item.id} className="rsc-news__item">
+              {items.map((item, index) => (
+                <li
+                  key={item.id}
+                  className="rsc-news__item"
+                  style={{ transitionDelay: inView ? `${0.2 + index * 0.08}s` : '0s' }}
+                >
                   <button
                     className="rsc-news__link"
                     onClick={() => setOpenId(item.id)}
                   >
                     <span className="rsc-news__date">{item.date}</span>
-                    <span className="rsc-news__divider" aria-hidden="true" />
                     <span className="rsc-news__text">
                       <span className="rsc-news__title">{item.title}</span>
                       {item.excerpt && (
@@ -147,6 +176,7 @@ const NEWS_CSS = `
   .rsc-news {
     background: #060606;
     padding: 110px 24px 120px;
+    overflow-x: clip;
   }
 
   .rsc-news__inner {
@@ -154,13 +184,32 @@ const NEWS_CSS = `
     margin: 0 auto;
   }
 
+  /* ---------- Появление блока ---------- */
+  .rsc-news__heading,
+  .rsc-news__subheading,
+  .rsc-news__item {
+    transition: opacity 0.6s ease, transform 0.6s cubic-bezier(0.22, 0.8, 0.3, 1);
+  }
+
+  /* Скрыты только ДО появления */
+  .rsc-news:not(.rsc-news--in) .rsc-news__heading,
+  .rsc-news:not(.rsc-news--in) .rsc-news__subheading,
+  .rsc-news:not(.rsc-news--in) .rsc-news__item {
+    opacity: 0;
+    transform: translateY(24px);
+  }
+
+  .rsc-news--in .rsc-news__heading { transition-delay: 0s; }
+  .rsc-news--in .rsc-news__subheading { transition-delay: 0.1s; }
+
   .rsc-news__heading {
     margin: 0 0 10px;
     text-align: center;
-    font-family: 'Tablon', 'Arial Black', sans-serif;
+    font-family: 'Tablon', 'Arial Narrow', 'Arial', sans-serif;
     font-size: clamp(36px, 6vw, 64px);
     line-height: 1;
-    font-weight: 400;
+    font-weight: 600;
+    letter-spacing: 0.03em;
     text-transform: uppercase;
     color: #ffffff;
   }
@@ -179,39 +228,35 @@ const NEWS_CSS = `
     position: relative;
   }
 
+  /* Лента: общая акцентная линия слева на всю высоту */
   .rsc-news__list {
     margin: 0;
-    padding: 0 24px 40px 0;
+    padding: 0 24px 40px 36px;
     list-style: none;
     overflow-y: auto;
-    scrollbar-width: thin;
-    scrollbar-color: var(--accent, #00c3d0) #141414;
+    border-left: 3px solid var(--accent, #00c3d0);
+    scrollbar-width: none; /* скроллбар скрыт, листается колесом/свайпом */
+    -ms-overflow-style: none;
   }
 
   .rsc-news__list::-webkit-scrollbar {
-    width: 5px;
-  }
-
-  .rsc-news__list::-webkit-scrollbar-track {
-    background: #141414;
-    border-radius: 3px;
-  }
-
-  .rsc-news__list::-webkit-scrollbar-thumb {
-    background: var(--accent, #00c3d0);
-    border-radius: 3px;
+    display: none;
   }
 
   .rsc-news__item {
     border-bottom: 1px solid rgba(255, 255, 255, 0.08);
   }
 
+  .rsc-news__item:last-child {
+    border-bottom: none;
+  }
+
   .rsc-news__link {
     display: flex;
     align-items: center;
-    gap: 32px;
+    gap: 28px;
     width: 100%;
-    padding: 28px 8px;
+    padding: 26px 8px 26px 0;
     background: transparent;
     border: none;
     text-align: left;
@@ -220,9 +265,10 @@ const NEWS_CSS = `
   }
 
   .rsc-news__link:hover {
-    background: rgba(0, 195, 208, 0.05);
+    background: rgba(255, 255, 255, 0.03);
   }
 
+  /* Дата — акцентный цвет */
   .rsc-news__date {
     flex-shrink: 0;
     width: 110px;
@@ -230,15 +276,6 @@ const NEWS_CSS = `
     font-size: 20px;
     font-weight: 600;
     color: var(--accent, #00c3d0);
-  }
-
-  .rsc-news__divider {
-    flex-shrink: 0;
-    width: 2px;
-    align-self: stretch;
-    min-height: 48px;
-    background: var(--accent, #00c3d0);
-    opacity: 0.6;
   }
 
   .rsc-news__text {
@@ -271,6 +308,7 @@ const NEWS_CSS = `
     text-align: left;
   }
 
+  /* Стрелка справа */
   .rsc-news__arrow {
     flex-shrink: 0;
     color: #464646;
@@ -282,9 +320,10 @@ const NEWS_CSS = `
     transform: translateX(4px);
   }
 
+  /* Затемнение снизу */
   .rsc-news__fade {
     position: absolute;
-    left: 0; right: 5px; bottom: 0;
+    left: 0; right: 0; bottom: 0;
     height: 45%;
     background: linear-gradient(
       to bottom,
@@ -319,12 +358,17 @@ const NEWS_CSS = `
     width: min(620px, calc(100vw - 32px));
     max-height: calc(100vh - 64px);
     overflow-y: auto;
+    scrollbar-width: none;
     padding: 36px 36px 32px;
     background: #141414;
     border: 1px solid rgba(255, 255, 255, 0.12);
     border-radius: 14px;
     transform: translate(-50%, -50%);
     animation: rsc-nm-in 0.25s ease;
+  }
+
+  .rsc-nm::-webkit-scrollbar {
+    display: none;
   }
 
   @keyframes rsc-nm-in {
@@ -383,7 +427,7 @@ const NEWS_CSS = `
     font-weight: 300;
     line-height: 1.8;
     color: #8e8e93;
-    white-space: pre-wrap; /* сохраняет переносы строк из админки */
+    white-space: pre-wrap;
   }
 
   /* ---------- Мобилка ---------- */
@@ -393,29 +437,19 @@ const NEWS_CSS = `
     }
 
     .rsc-news__list {
-      padding-right: 14px;
-    }
-
-    .rsc-news__fade {
-      right: 5px;
+      padding-left: 24px;
+      border-left-width: 3px;
     }
 
     .rsc-news__link {
       flex-wrap: wrap;
-      gap: 12px 16px;
-      padding: 22px 4px;
+      gap: 8px 16px;
+      padding: 20px 4px 20px 0;
     }
 
     .rsc-news__date {
       width: auto;
       font-size: 16px;
-    }
-
-    .rsc-news__divider {
-      width: 100%;
-      height: 2px;
-      min-height: 0;
-      order: 3;
     }
 
     .rsc-news__arrow {

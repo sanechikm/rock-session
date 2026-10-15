@@ -30,6 +30,7 @@ type Poster = {
   visible: boolean;
   sort_order: number;
   image: string | null;
+  use_as_hero: boolean;
   artists: Artist[] | null;
   event_partners: CrewMember[] | null;
 };
@@ -45,6 +46,7 @@ type PosterForm = {
   description: string;
   is_past: boolean;
   imageUrl: string;
+  use_as_hero: boolean;
   artists: Artist[];
   partners: CrewMember[];
 };
@@ -60,6 +62,7 @@ const EMPTY_FORM: PosterForm = {
   description: '',
   is_past: false,
   imageUrl: '',
+  use_as_hero: false,
   artists: [],
   partners: [],
 };
@@ -147,6 +150,7 @@ export default function AdminPostersPage() {
       description: poster.description || '',
       is_past: poster.is_past,
       imageUrl: poster.image || '',
+      use_as_hero: poster.use_as_hero ?? false,
       artists: (poster.artists || []).map((a) => ({ name: a.name || '', role: a.role || '' })),
       partners: (poster.event_partners || []).map((p) =>
         typeof p === 'string' ? { name: p, role: '' } : { name: p.name || '', role: p.role || '' }
@@ -232,6 +236,7 @@ export default function AdminPostersPage() {
       slug,
       is_past: form.is_past,
       image: form.imageUrl.trim() || null,
+      use_as_hero: form.use_as_hero,
       artists: form.artists
         .filter((a) => a.name.trim())
         .map((a) => ({ name: a.name.trim(), role: a.role.trim() || undefined })),
@@ -280,8 +285,15 @@ export default function AdminPostersPage() {
   };
 
   /* ---------- Рендер ---------- */
-  const current = posters.filter((p) => !p.is_past);
-  const history = posters.filter((p) => p.is_past);
+  /* Сортировка по дате: актуальные — ближайшие сверху, история — недавние сверху */
+  const byDate = (a: Poster, b: Poster, dir: 1 | -1) => {
+    const year = new Date().getFullYear();
+    const ta = new Date(year, MONTHS_RU.indexOf(a.month), parseInt(a.day, 10)).getTime();
+    const tb = new Date(year, MONTHS_RU.indexOf(b.month), parseInt(b.day, 10)).getTime();
+    return (ta - tb) * dir;
+  };
+  const current = posters.filter((p) => !p.is_past).sort((a, b) => byDate(a, b, 1));
+  const history = posters.filter((p) => p.is_past).sort((a, b) => byDate(a, b, -1));
 
   const renderRow = (poster: Poster) => (
     <li key={poster.id} className={'pt__row' + (!poster.visible ? ' pt__row--hidden' : '')}>
@@ -337,7 +349,12 @@ export default function AdminPostersPage() {
 
       <div className="pt">
         <div className="pt__header">
-          <h1 className="pt__title">Афиши</h1>
+          <div>
+            <h1 className="pt__title">Афиши</h1>
+            <p className="pt__subtitle">
+              {current.length} актуальных · {history.length} в истории
+            </p>
+          </div>
           <button className="pt__add-btn" onClick={openNew}>
             <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" aria-hidden="true">
               <path d="M12 5v14M5 12h14" />
@@ -430,6 +447,16 @@ export default function AdminPostersPage() {
                   hidden
                   onChange={handleImageUpload}
                 />
+
+                <label className="ptm__checkbox">
+                  <input
+                    type="checkbox"
+                    name="use_as_hero"
+                    checked={form.use_as_hero}
+                    onChange={handleChange}
+                  />
+                  Использовать обложку как фон главной страницы (Hero)
+                </label>
               </div>
 
               <div className="ptm__field">
@@ -583,68 +610,101 @@ export default function AdminPostersPage() {
 }
 
 const POSTERS_CSS = `
-  .pt { max-width: 900px; }
+  .pt {
+    max-width: 900px;
+    animation: pt-in 0.4s ease;
+  }
+
+  @keyframes pt-in {
+    from { opacity: 0; transform: translateY(12px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
 
   .pt__header {
     display: flex;
     align-items: center;
     justify-content: space-between;
     gap: 16px;
-    margin-bottom: 32px;
+    margin-bottom: 28px;
   }
 
   .pt__title {
-    margin: 0;
+    margin: 0 0 4px;
     font-family: 'Poppins', sans-serif;
-    font-size: 28px;
+    font-size: 30px;
     font-weight: 600;
     color: #ffffff;
+  }
+
+  .pt__subtitle {
+    margin: 0;
+    font-family: 'Poppins', sans-serif;
+    font-size: 13px;
+    color: #5a5a5e;
   }
 
   .pt__add-btn {
     display: inline-flex;
     align-items: center;
     gap: 10px;
-    padding: 12px 24px;
+    padding: 12px 22px;
     font-family: 'Poppins', sans-serif;
-    font-size: 15px;
+    font-size: 14px;
     font-weight: 500;
-    color: #ffffff;
-    background: #1e1e1e;
-    border: 1px solid rgba(255, 255, 255, 0.15);
-    border-radius: 10px;
+    color: #060606;
+    background: var(--accent, #00c3d0);
+    border: none;
+    border-radius: 12px;
     cursor: pointer;
-    transition: border-color 0.2s ease, color 0.2s ease;
+    transition: transform 0.2s ease, filter 0.2s ease;
   }
 
   .pt__add-btn:hover {
-    border-color: var(--accent, #00c3d0);
-    color: var(--accent, #00c3d0);
+    transform: translateY(-2px);
+    filter: brightness(1.1);
   }
 
   .pt__error {
+    display: flex;
+    align-items: center;
+    gap: 10px;
     padding: 12px 16px;
     margin: 0 0 24px;
     font-family: 'Poppins', sans-serif;
     font-size: 14px;
     color: #ff5a5a;
-    background: rgba(255, 90, 90, 0.1);
+    background: rgba(255, 90, 90, 0.08);
     border: 1px solid rgba(255, 90, 90, 0.3);
-    border-radius: 10px;
+    border-radius: 12px;
   }
 
   .pt__status, .pt__empty {
     font-family: 'Poppins', sans-serif;
     font-size: 14px;
-    color: #464646;
+    color: #5a5a5e;
   }
 
-  .pt__section { margin-bottom: 40px; }
+  .pt__section {
+    margin-bottom: 32px;
+    padding: 24px;
+    background: #101010;
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    border-radius: 18px;
+    animation: pt-section-in 0.5s cubic-bezier(0.22, 0.8, 0.3, 1) both;
+  }
+
+  .pt__section:nth-of-type(1) { animation-delay: 0.05s; }
+  .pt__section:nth-of-type(2) { animation-delay: 0.12s; }
+
+  @keyframes pt-section-in {
+    from { opacity: 0; transform: translateY(16px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
 
   .pt__section-title {
     margin: 0 0 16px;
     font-family: 'Poppins', sans-serif;
-    font-size: 20px;
+    font-size: 17px;
     font-weight: 600;
     color: #ffffff;
   }
@@ -655,7 +715,7 @@ const POSTERS_CSS = `
     list-style: none;
     display: flex;
     flex-direction: column;
-    gap: 12px;
+    gap: 10px;
   }
 
   .pt__row {
@@ -663,9 +723,16 @@ const POSTERS_CSS = `
     align-items: center;
     justify-content: space-between;
     gap: 16px;
-    padding: 18px 24px;
-    background: #1e1e1e;
+    padding: 15px 18px;
+    background: #181818;
+    border: 1px solid rgba(255, 255, 255, 0.06);
     border-radius: 14px;
+    transition: border-color 0.2s ease, background 0.2s ease;
+  }
+
+  .pt__row:hover {
+    background: #1c1c1c;
+    border-color: rgba(255, 255, 255, 0.12);
   }
 
   .pt__row--hidden .pt__row-title,
@@ -721,7 +788,7 @@ const POSTERS_CSS = `
     padding: 0;
     background: transparent;
     border: none;
-    border-radius: 8px;
+    border-radius: 10px;
     color: #8e8e93;
     cursor: pointer;
     transition: color 0.2s ease, background 0.2s ease;
@@ -750,17 +817,20 @@ const POSTERS_CSS = `
     width: min(620px, calc(100vw - 32px));
     max-height: calc(100vh - 48px);
     overflow-y: auto;
+    scrollbar-width: none;
     padding: 36px 32px 28px;
     background: #141414;
-    border: 1px solid rgba(255, 255, 255, 0.12);
-    border-radius: 14px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 18px;
     transform: translate(-50%, -50%);
-    animation: ptm-in 0.25s ease;
+    animation: ptm-in 0.3s cubic-bezier(0.22, 0.9, 0.3, 1);
   }
 
+  .ptm::-webkit-scrollbar { display: none; }
+
   @keyframes ptm-in {
-    from { opacity: 0; transform: translate(-50%, -48%); }
-    to   { opacity: 1; transform: translate(-50%, -50%); }
+    from { opacity: 0; transform: translate(-50%, -47%) scale(0.98); }
+    to   { opacity: 1; transform: translate(-50%, -50%) scale(1); }
   }
 
   .ptm__close {

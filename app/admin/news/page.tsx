@@ -5,7 +5,7 @@
 
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/lib/supabase';
 
 type NewsItem = {
@@ -38,6 +38,57 @@ export default function AdminNewsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [dragIndex, setDragIndex] = useState<number | null>(null);
+
+  /* Перетаскивание пальцем (touch) */
+  const listRef = useRef<HTMLUListElement>(null);
+  const [touchDrag, setTouchDrag] = useState<number | null>(null);
+  const touchRef = useRef<{
+    index: number;
+    startY: number;
+    active: boolean;
+  } | null>(null);
+
+  const reorder = (from: number, to: number) => {
+    if (from === to) return;
+    const next = [...news];
+    const [moved] = next.splice(from, 1);
+    next.splice(to, 0, moved);
+    setNews(next);
+  };
+
+  const handleGripDown = (e: React.PointerEvent, index: number) => {
+    if (e.pointerType !== 'touch') return;
+    e.currentTarget.setPointerCapture(e.pointerId);
+    touchRef.current = { index, startY: e.clientY, active: false };
+  };
+
+  const handleGripMove = (e: React.PointerEvent) => {
+    const t = touchRef.current;
+    if (!t) return;
+    if (!t.active && Math.abs(e.clientY - t.startY) > 14) {
+      t.active = true;
+      setTouchDrag(t.index);
+    }
+    if (!t.active || !listRef.current) return;
+    const rows = Array.from(listRef.current.children) as HTMLElement[];
+    let target = t.index;
+    rows.forEach((row, i) => {
+      const rect = row.getBoundingClientRect();
+      if (e.clientY > rect.top + rect.height / 2) target = i;
+    });
+    if (target !== t.index) {
+      reorder(t.index, target);
+      t.index = target;
+      setTouchDrag(target);
+    }
+  };
+
+  const handleGripUp = () => {
+    const t = touchRef.current;
+    if (t?.active) saveOrder(news);
+    touchRef.current = null;
+    setTouchDrag(null);
+  };
 
   /* Модалка: null = закрыта, 'new' = создание, число = id редактируемой */
   const [modal, setModal] = useState<'new' | number | null>(null);
@@ -201,7 +252,10 @@ export default function AdminNewsPage() {
       <div className="nw">
         {/* Шапка */}
         <div className="nw__header">
-          <h1 className="nw__title">Новости</h1>
+          <div>
+            <h1 className="nw__title">Новости</h1>
+            <p className="nw__subtitle">{news.length} публикаций</p>
+          </div>
           <button className="nw__add-btn" onClick={openNew}>
             <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" aria-hidden="true">
               <path d="M12 5v14M5 12h14" />
@@ -218,13 +272,13 @@ export default function AdminNewsPage() {
         )}
 
         {/* Список */}
-        <ul className="nw__list">
+        <ul className="nw__list" ref={listRef}>
           {news.map((item, index) => (
             <li
               key={item.id}
               className={
                 'nw__row' +
-                (dragIndex === index ? ' nw__row--dragging' : '') +
+                (dragIndex === index || touchDrag === index ? ' nw__row--dragging' : '') +
                 (!item.visible ? ' nw__row--hidden' : '')
               }
               draggable
@@ -278,7 +332,15 @@ export default function AdminNewsPage() {
                 </button>
 
                 {/* Рукоятка */}
-                <span className="nw__grip" aria-hidden="true">
+                <span
+                  className="nw__grip"
+                  aria-hidden="true"
+                  style={{ touchAction: 'none' }}
+                  onPointerDown={(e) => handleGripDown(e, index)}
+                  onPointerMove={handleGripMove}
+                  onPointerUp={handleGripUp}
+                  onPointerCancel={handleGripUp}
+                >
                   <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor">
                     <circle cx="9" cy="6" r="1.6" /><circle cx="15" cy="6" r="1.6" />
                     <circle cx="9" cy="12" r="1.6" /><circle cx="15" cy="12" r="1.6" />
@@ -379,6 +441,12 @@ export default function AdminNewsPage() {
 const NEWS_CSS = `
   .nw {
     max-width: 900px;
+    animation: nw-in 0.4s ease;
+  }
+
+  @keyframes nw-in {
+    from { opacity: 0; transform: translateY(12px); }
+    to   { opacity: 1; transform: translateY(0); }
   }
 
   .nw__header {
@@ -386,36 +454,43 @@ const NEWS_CSS = `
     align-items: center;
     justify-content: space-between;
     gap: 16px;
-    margin-bottom: 32px;
+    margin-bottom: 24px;
   }
 
   .nw__title {
-    margin: 0;
+    margin: 0 0 4px;
     font-family: 'Poppins', sans-serif;
-    font-size: 28px;
+    font-size: 30px;
     font-weight: 600;
     color: #ffffff;
+  }
+
+  .nw__subtitle {
+    margin: 0;
+    font-family: 'Poppins', sans-serif;
+    font-size: 13px;
+    color: #5a5a5e;
   }
 
   .nw__add-btn {
     display: inline-flex;
     align-items: center;
     gap: 10px;
-    padding: 12px 24px;
+    padding: 12px 22px;
     font-family: 'Poppins', sans-serif;
-    font-size: 15px;
+    font-size: 14px;
     font-weight: 500;
-    color: #ffffff;
-    background: #1e1e1e;
-    border: 1px solid rgba(255, 255, 255, 0.15);
-    border-radius: 10px;
+    color: #060606;
+    background: var(--accent, #00c3d0);
+    border: none;
+    border-radius: 12px;
     cursor: pointer;
-    transition: border-color 0.2s ease, color 0.2s ease;
+    transition: transform 0.2s ease, filter 0.2s ease;
   }
 
   .nw__add-btn:hover {
-    border-color: var(--accent, #00c3d0);
-    color: var(--accent, #00c3d0);
+    transform: translateY(-2px);
+    filter: brightness(1.1);
   }
 
   .nw__error {
@@ -424,37 +499,51 @@ const NEWS_CSS = `
     font-family: 'Poppins', sans-serif;
     font-size: 14px;
     color: #ff5a5a;
-    background: rgba(255, 90, 90, 0.1);
+    background: rgba(255, 90, 90, 0.08);
     border: 1px solid rgba(255, 90, 90, 0.3);
-    border-radius: 10px;
+    border-radius: 12px;
   }
 
   .nw__status {
     font-family: 'Poppins', sans-serif;
     font-size: 14px;
-    color: #464646;
+    color: #5a5a5e;
   }
 
   .nw__list {
     margin: 0;
-    padding: 0;
+    padding: 20px;
     list-style: none;
     display: flex;
     flex-direction: column;
-    gap: 12px;
+    gap: 10px;
+    background: #101010;
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    border-radius: 16px;
+    animation: nw-section-in 0.5s cubic-bezier(0.22, 0.8, 0.3, 1) 0.08s both;
+  }
+
+  @keyframes nw-section-in {
+    from { opacity: 0; transform: translateY(14px); }
+    to   { opacity: 1; transform: translateY(0); }
   }
 
   .nw__row {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 20px;
-    padding: 20px 24px;
-    background: #1e1e1e;
-    border: 1px solid transparent;
-    border-radius: 14px;
+    gap: 16px;
+    padding: 16px 18px;
+    background: #181818;
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    border-radius: 12px;
     cursor: grab;
-    transition: border-color 0.2s ease, opacity 0.2s ease;
+    transition: border-color 0.2s ease, opacity 0.2s ease, background 0.2s ease;
+  }
+
+  .nw__row:hover {
+    background: #1c1c1c;
+    border-color: rgba(255, 255, 255, 0.12);
   }
 
   .nw__row:active {
@@ -462,8 +551,14 @@ const NEWS_CSS = `
   }
 
   .nw__row--dragging {
+    position: relative;
+    z-index: 5;
     border-color: var(--accent, #00c3d0);
-    opacity: 0.7;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+  }
+
+  .nw__grip {
+    touch-action: none;
   }
 
   .nw__row--hidden .nw__row-title,
@@ -563,17 +658,20 @@ const NEWS_CSS = `
     width: min(560px, calc(100vw - 32px));
     max-height: calc(100vh - 64px);
     overflow-y: auto;
+    scrollbar-width: none;
     padding: 36px 32px 28px;
     background: #141414;
-    border: 1px solid rgba(255, 255, 255, 0.12);
-    border-radius: 14px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 18px;
     transform: translate(-50%, -50%);
-    animation: nwm-in 0.25s ease;
+    animation: nwm-in 0.3s cubic-bezier(0.22, 0.9, 0.3, 1);
   }
 
+  .nwm::-webkit-scrollbar { display: none; }
+
   @keyframes nwm-in {
-    from { opacity: 0; transform: translate(-50%, -48%); }
-    to   { opacity: 1; transform: translate(-50%, -50%); }
+    from { opacity: 0; transform: translate(-50%, -47%) scale(0.98); }
+    to   { opacity: 1; transform: translate(-50%, -50%) scale(1); }
   }
 
   .nwm__close {
