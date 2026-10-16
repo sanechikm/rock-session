@@ -630,7 +630,7 @@ const POSTERS_CSS = `
 
   .pt__title {
     margin: 0 0 4px;
-    font-family: 'Poppins', sans-serif;
+    font-family: var(--font-poppins), sans-serif;
     font-size: 30px;
     font-weight: 600;
     color: #ffffff;
@@ -638,7 +638,7 @@ const POSTERS_CSS = `
 
   .pt__subtitle {
     margin: 0;
-    font-family: 'Poppins', sans-serif;
+    font-family: var(--font-poppins), sans-serif;
     font-size: 13px;
     color: #5a5a5e;
   }
@@ -648,7 +648,7 @@ const POSTERS_CSS = `
     align-items: center;
     gap: 10px;
     padding: 12px 22px;
-    font-family: 'Poppins', sans-serif;
+    font-family: var(--font-poppins), sans-serif;
     font-size: 14px;
     font-weight: 500;
     color: #060606;
@@ -670,7 +670,7 @@ const POSTERS_CSS = `
     gap: 10px;
     padding: 12px 16px;
     margin: 0 0 24px;
-    font-family: 'Poppins', sans-serif;
+    font-family: var(--font-poppins), sans-serif;
     font-size: 14px;
     color: #ff5a5a;
     background: rgba(255, 90, 90, 0.08);
@@ -679,7 +679,7 @@ const POSTERS_CSS = `
   }
 
   .pt__status, .pt__empty {
-    font-family: 'Poppins', sans-serif;
+    font-family: var(--font-poppins), sans-serif;
     font-size: 14px;
     color: #5a5a5e;
   }
@@ -703,7 +703,7 @@ const POSTERS_CSS = `
 
   .pt__section-title {
     margin: 0 0 16px;
-    font-family: 'Poppins', sans-serif;
+    font-family: var(--font-poppins), sans-serif;
     font-size: 17px;
     font-weight: 600;
     color: #ffffff;
@@ -749,20 +749,20 @@ const POSTERS_CSS = `
   }
 
   .pt__row-date {
-    font-family: 'Poppins', sans-serif;
+    font-family: var(--font-poppins), sans-serif;
     font-size: 13px;
     color: #8e8e93;
   }
 
   .pt__row-title {
-    font-family: 'Poppins', sans-serif;
+    font-family: var(--font-poppins), sans-serif;
     font-size: 16px;
     font-weight: 500;
     color: #ffffff;
   }
 
   .pt__row-link {
-    font-family: 'Poppins', sans-serif;
+    font-family: var(--font-poppins), sans-serif;
     font-size: 12px;
     color: var(--accent, #00c3d0);
     text-decoration: none;
@@ -854,7 +854,7 @@ const POSTERS_CSS = `
 
   .ptm__title {
     margin: 0 0 24px;
-    font-family: 'Poppins', sans-serif;
+    font-family: var(--font-poppins), sans-serif;
     font-size: 22px;
     font-weight: 600;
     color: #ffffff;
@@ -879,14 +879,14 @@ const POSTERS_CSS = `
   }
 
   .ptm__label {
-    font-family: 'Poppins', sans-serif;
+    font-family: var(--font-poppins), sans-serif;
     font-size: 13px;
     color: #8e8e93;
   }
 
   .ptm__input {
     padding: 12px 14px;
-    font-family: 'Poppins', sans-serif;
+    font-family: var(--font-poppins), sans-serif;
     font-size: 14px;
     color: #ffffff;
     background: #060606;
@@ -924,7 +924,7 @@ const POSTERS_CSS = `
 
   .ptm__image-remove {
     padding: 8px 14px;
-    font-family: 'Poppins', sans-serif;
+    font-family: var(--font-poppins), sans-serif;
     font-size: 13px;
     color: #ff5a5a;
     background: transparent;
@@ -950,7 +950,7 @@ const POSTERS_CSS = `
 
   .ptm__upload-btn {
     padding: 11px 16px;
-    font-family: 'Poppins', sans-serif;
+    font-family: var(--font-poppins), sans-serif;
     font-size: 13px;
     color: #ffffff;
     background: #1e1e1e;
@@ -968,7 +968,7 @@ const POSTERS_CSS = `
   .ptm__upload-btn:disabled { opacity: 0.6; }
 
   .ptm__or {
-    font-family: 'Poppins', sans-serif;
+    font-family: var(--font-poppins), sans-serif;
     font-size: 13px;
     color: #464646;
     white-space: nowrap;
@@ -1023,7 +1023,7 @@ const POSTERS_CSS = `
   .ptm__add-small {
     align-self: flex-start;
     padding: 9px 16px;
-    font-family: 'Poppins', sans-serif;
+    font-family: var(--font-poppins), sans-serif;
     font-size: 13px;
     color: var(--accent, #00c3d0);
     background: transparent;
@@ -1041,7 +1041,7 @@ const POSTERS_CSS = `
     display: flex;
     align-items: center;
     gap: 10px;
-    font-family: 'Poppins', sans-serif;
+    font-family: var(--font-poppins), sans-serif;
     font-size: 14px;
     color: #8e8e93;
     cursor: pointer;
@@ -1055,7 +1055,7 @@ const POSTERS_CSS = `
 
   .ptm__error {
     margin: 0;
-    font-family: 'Poppins', sans-serif;
+    font-family: var(--font-poppins), sans-serif;
     font-size: 13px;
     color: #ff5a5a;
   }
@@ -1063,7 +1063,7 @@ const POSTERS_CSS = `
   .ptm__submit {
     margin-top: 8px;
     padding: 14px 24px;
-    font-family: 'Poppins', sans-serif;
+    font-family: var(--font-poppins), sans-serif;
     font-size: 15px;
     font-weight: 500;
     color: #060606;

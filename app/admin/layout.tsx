@@ -242,7 +242,7 @@ const ADMIN_LAYOUT_CSS = `
   }
 
   .adm__logo-text {
-    font-family: 'Tablon', 'Arial Narrow', 'Arial', sans-serif;
+    font-family: var(--font-tablon), 'Arial', sans-serif;
     font-size: 17px;
     font-weight: 600;
     letter-spacing: 0.06em;
@@ -264,7 +264,7 @@ const ADMIN_LAYOUT_CSS = `
     align-items: center;
     gap: 12px;
     padding: 12px 14px;
-    font-family: 'Poppins', sans-serif;
+    font-family: var(--font-poppins), sans-serif;
     font-size: 15px;
     font-weight: 400;
     color: #8e8e93;
@@ -329,7 +329,7 @@ const ADMIN_LAYOUT_CSS = `
     align-items: center;
     gap: 10px;
     padding: 11px 14px;
-    font-family: 'Poppins', sans-serif;
+    font-family: var(--font-poppins), sans-serif;
     font-size: 14px;
     color: #5a5a5e;
     text-decoration: none;

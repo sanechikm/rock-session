@@ -108,7 +108,7 @@ const LOGIN_CSS = `
 
   .lg__title {
     margin: 0 0 6px;
-    font-family: 'Tablon', 'Arial Black', sans-serif;
+    font-family: var(--font-tablon), 'Arial', sans-serif;
     font-size: 26px;
     font-weight: 400;
     text-transform: uppercase;
@@ -117,7 +117,7 @@ const LOGIN_CSS = `
 
   .lg__subtitle {
     margin: 0 0 32px;
-    font-family: 'Poppins', sans-serif;
+    font-family: var(--font-poppins), sans-serif;
     font-size: 14px;
     color: #8e8e93;
   }
@@ -130,14 +130,14 @@ const LOGIN_CSS = `
   }
 
   .lg__label {
-    font-family: 'Poppins', sans-serif;
+    font-family: var(--font-poppins), sans-serif;
     font-size: 13px;
     color: #8e8e93;
   }
 
   .lg__input {
     padding: 13px 16px;
-    font-family: 'Poppins', sans-serif;
+    font-family: var(--font-poppins), sans-serif;
     font-size: 15px;
     color: #ffffff;
     background: #060606;
@@ -157,7 +157,7 @@ const LOGIN_CSS = `
 
   .lg__error {
     margin: 4px 0 16px;
-    font-family: 'Poppins', sans-serif;
+    font-family: var(--font-poppins), sans-serif;
     font-size: 13px;
     color: #ff5a5a;
   }
@@ -165,7 +165,7 @@ const LOGIN_CSS = `
   .lg__submit {
     width: 100%;
     padding: 14px 24px;
-    font-family: 'Poppins', sans-serif;
+    font-family: var(--font-poppins), sans-serif;
     font-size: 15px;
     font-weight: 500;
     color: #060606;

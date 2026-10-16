@@ -207,7 +207,7 @@ const VIDEOS_CSS = `
   .rsc-videos__heading {
     margin: 0 0 10px;
     text-align: center;
-    font-family: 'Tablon', 'Arial Narrow', 'Arial', sans-serif;
+    font-family: var(--font-tablon), 'Arial', sans-serif;
     font-size: clamp(36px, 6vw, 64px);
     line-height: 1.05;
     font-weight: 600;
@@ -219,7 +219,7 @@ const VIDEOS_CSS = `
   .rsc-videos__subheading {
     margin: 0 0 56px;
     text-align: center;
-    font-family: 'Belepotan', 'Poppins', sans-serif;
+    font-family: var(--font-belepotan), var(--font-poppins), sans-serif;
     font-size: clamp(17px, 2.2vw, 24px);
     letter-spacing: 0.1em;
     text-transform: uppercase;
@@ -319,7 +319,7 @@ const VIDEOS_CSS = `
 
   .rsc-videos__title {
     margin: 0;
-    font-family: 'Tablon', 'Arial Narrow', 'Arial', sans-serif;
+    font-family: var(--font-tablon), 'Arial', sans-serif;
     font-size: clamp(17px, 2vw, 22px);
     line-height: 1.2;
     font-weight: 600;
@@ -330,7 +330,7 @@ const VIDEOS_CSS = `
 
   .rsc-videos__date {
     flex-shrink: 0;
-    font-family: 'Poppins', sans-serif;
+    font-family: var(--font-poppins), sans-serif;
     font-size: 15px;
     color: #8e8e93;
   }

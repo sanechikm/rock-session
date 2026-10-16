@@ -130,7 +130,7 @@ const CONTACTS_CSS = `
 
   .rsc-contacts__heading {
     margin: 0 0 10px;
-    font-family: 'Tablon', 'Arial Black', sans-serif;
+    font-family: var(--font-tablon), 'Arial', sans-serif;
     font-size: clamp(36px, 6vw, 64px);
     line-height: 1;
     font-weight: 600;
@@ -140,7 +140,7 @@ const CONTACTS_CSS = `
 
   .rsc-contacts__subheading {
     margin: 0 0 64px;
-    font-family: 'Belepotan', 'Poppins', sans-serif;
+    font-family: var(--font-belepotan), var(--font-poppins), sans-serif;
     font-size: clamp(17px, 2.2vw, 24px);
     letter-spacing: 0.1em;
     text-transform: uppercase;
@@ -156,14 +156,14 @@ const CONTACTS_CSS = `
   }
 
   .rsc-contacts__phone-label {
-    font-family: 'Poppins', sans-serif;
+    font-family: var(--font-poppins), sans-serif;
     font-size: 17px;
     font-weight: 600;
     color: #ffffff;
   }
 
   .rsc-contacts__phone {
-    font-family: 'Poppins', sans-serif;
+    font-family: var(--font-poppins), sans-serif;
     font-size: clamp(20px, 2.6vw, 26px);
     font-weight: 500;
     color: #ffffff;

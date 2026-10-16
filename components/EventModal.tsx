@@ -360,7 +360,7 @@ const MODAL_CSS = `
 
   .rsc-pm__title {
     margin: 20px 0 14px;
-    font-family: 'Tablon', 'Arial Black', sans-serif;
+    font-family: var(--font-tablon), 'Arial', sans-serif;
     font-size: clamp(28px, 4vw, 44px);
     line-height: 1.05;
     font-weight: 400;
@@ -374,7 +374,7 @@ const MODAL_CSS = `
     gap: 10px;
     margin-bottom: 24px;
     padding: 10px 18px;
-    font-family: 'Poppins', sans-serif;
+    font-family: var(--font-poppins), sans-serif;
     font-size: 15px;
     font-weight: 600;
     color: #060606;
@@ -388,7 +388,7 @@ const MODAL_CSS = `
 
   .rsc-pm__section-title {
     margin: 0 0 16px;
-    font-family: 'Tablon', 'Arial Black', sans-serif;
+    font-family: var(--font-tablon), 'Arial', sans-serif;
     font-size: 20px;
     font-weight: 400;
     text-transform: uppercase;
@@ -397,7 +397,7 @@ const MODAL_CSS = `
 
   .rsc-pm__description {
     margin: 0;
-    font-family: 'Poppins', sans-serif;
+    font-family: var(--font-poppins), sans-serif;
     font-size: 15px;
     font-weight: 300;
     line-height: 1.75;
@@ -409,7 +409,7 @@ const MODAL_CSS = `
     display: flex;
     align-items: center;
     gap: 10px;
-    font-family: 'Poppins', sans-serif;
+    font-family: var(--font-poppins), sans-serif;
     font-size: 15px;
     font-weight: 500;
     color: #ffffff;
@@ -458,7 +458,7 @@ const MODAL_CSS = `
     justify-content: center;
     width: 56px;
     height: 56px;
-    font-family: 'Tablon', sans-serif;
+    font-family: var(--font-tablon), sans-serif;
     font-size: 24px;
     color: #060606;
     background: var(--accent, #00c3d0);
@@ -471,14 +471,14 @@ const MODAL_CSS = `
   }
 
   .rsc-pm__act-name {
-    font-family: 'Poppins', sans-serif;
+    font-family: var(--font-poppins), sans-serif;
     font-size: 15px;
     font-weight: 600;
     color: #ffffff;
   }
 
   .rsc-pm__act-role {
-    font-family: 'Poppins', sans-serif;
+    font-family: var(--font-poppins), sans-serif;
     font-size: 12px;
     color: #8e8e93;
   }
@@ -506,7 +506,7 @@ const MODAL_CSS = `
     width: 44px;
     height: 44px;
     flex-shrink: 0;
-    font-family: 'Tablon', sans-serif;
+    font-family: var(--font-tablon), sans-serif;
     font-size: 18px;
     color: #060606;
     background: rgba(255, 255, 255, 0.85);
@@ -521,14 +521,14 @@ const MODAL_CSS = `
   }
 
   .rsc-pm__crew-name {
-    font-family: 'Poppins', sans-serif;
+    font-family: var(--font-poppins), sans-serif;
     font-size: 14px;
     font-weight: 600;
     color: #ffffff;
   }
 
   .rsc-pm__crew-role {
-    font-family: 'Poppins', sans-serif;
+    font-family: var(--font-poppins), sans-serif;
     font-size: 12px;
     color: #8e8e93;
   }
@@ -574,7 +574,7 @@ const MODAL_CSS = `
     margin-top: 32px;
     min-width: 220px;
     padding: 15px 32px;
-    font-family: 'Poppins', sans-serif;
+    font-family: var(--font-poppins), sans-serif;
     font-size: 16px;
     font-weight: 500;
     text-decoration: none;
@@ -591,7 +591,7 @@ const MODAL_CSS = `
 
   .rsc-pm__past-note {
     margin: 32px 0 0;
-    font-family: 'Poppins', sans-serif;
+    font-family: var(--font-poppins), sans-serif;
     font-size: 15px;
     color: #8e8e93;
     border-top: 1px solid rgba(255, 255, 255, 0.08);

@@ -1,17 +1,27 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
-import Header from '@/components/Header';
-import Footer from '@/components/Footer';
+import localFont from 'next/font/local';
+import { Poppins } from 'next/font/google';
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
+/* Локальные шрифты проекта */
+const tablon = localFont({
+  src: '../public/fonts/Tablon-Black.ttf',
+  variable: '--font-tablon',
+  weight: '600',
 });
 
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
+const belepotan = localFont({
+  src: '../public/fonts/Belepotan Rus.otf',
+  variable: '--font-belepotan',
+  weight: '400',
+});
+
+/* Poppins с Google Fonts */
+const poppins = Poppins({
+  subsets: ['latin'],
+  weight: ['300', '400', '500', '600'],
+  variable: '--font-poppins',
 });
 
 export const metadata: Metadata = {
@@ -23,7 +33,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html
       lang="ru"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+      className={`${tablon.variable} ${belepotan.variable} ${poppins.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col">{children}</body>
     </html>

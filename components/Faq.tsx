@@ -199,7 +199,7 @@ const FAQ_CSS = `
   .rsc-faq__heading {
     margin: 0 0 10px;
     text-align: center;
-    font-family: 'Tablon', 'Arial Narrow', 'Arial', sans-serif;
+    font-family: var(--font-tablon), 'Arial', sans-serif;
     font-size: clamp(36px, 6vw, 64px);
     line-height: 1;
     font-weight: 600;
@@ -211,7 +211,7 @@ const FAQ_CSS = `
   .rsc-faq__subheading {
     margin: 0 0 64px;
     text-align: center;
-    font-family: 'Belepotan', 'Poppins', sans-serif;
+    font-family: var(--font-belepotan), var(--font-poppins), sans-serif;
     font-size: clamp(17px, 2.2vw, 24px);
     letter-spacing: 0.1em;
     text-transform: uppercase;
@@ -251,7 +251,7 @@ const FAQ_CSS = `
   }
 
   .rsc-faq__question-text {
-    font-family: 'Poppins', sans-serif;
+    font-family: var(--font-poppins), sans-serif;
     font-size: clamp(17px, 2vw, 22px);
     font-weight: 600;
     line-height: 1.35;
@@ -298,7 +298,7 @@ const FAQ_CSS = `
     margin: 0;
     padding: 0 4px 28px 12px;
     max-width: 860px;
-    font-family: 'Poppins', sans-serif;
+    font-family: var(--font-poppins), sans-serif;
     font-size: clamp(14px, 1.8vw, 17px);
     font-weight: 300;
     line-height: 1.75;

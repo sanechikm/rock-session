@@ -171,7 +171,7 @@ const FOOTER_CSS = `
   }
 
   .rsc-footer__link {
-    font-family: 'Poppins', sans-serif;
+    font-family: var(--font-poppins), sans-serif;
     font-size: 15px;
     font-weight: 500;
     color: #ffffff;
@@ -213,7 +213,7 @@ const FOOTER_CSS = `
   }
 
   .rsc-footer__legal-link {
-    font-family: 'Poppins', sans-serif;
+    font-family: var(--font-poppins), sans-serif;
     font-size: 14px;
     color: #8e8e93;
     text-decoration: none;
@@ -230,7 +230,7 @@ const FOOTER_CSS = `
     flex-direction: column;
     gap: 6px;
     margin-bottom: 32px;
-    font-family: 'Poppins', sans-serif;
+    font-family: var(--font-poppins), sans-serif;
     font-size: 14px;
     color: #8e8e93;
   }
@@ -238,7 +238,7 @@ const FOOTER_CSS = `
   /* Копирайт */
   .rsc-footer__copy {
     margin: 0;
-    font-family: 'Poppins', sans-serif;
+    font-family: var(--font-poppins), sans-serif;
     font-size: 14px;
     color: #464646;
   }

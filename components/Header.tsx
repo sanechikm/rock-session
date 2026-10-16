@@ -185,7 +185,7 @@ const HEADER_CSS = `
 
   /* Hover — просто акцентный цвет, без подчёркиваний */
   .rsc-header__link {
-    font-family: 'Poppins', sans-serif;
+    font-family: var(--font-poppins), sans-serif;
     font-size: 15px;
     font-weight: 400;
     color: #ffffff;
@@ -292,7 +292,7 @@ const HEADER_CSS = `
 
   /* Пункты меню появляются каскадом при открытии */
   .rsc-mobile-menu__link {
-    font-family: 'Poppins', sans-serif;
+    font-family: var(--font-poppins), sans-serif;
     font-size: 22px;
     font-weight: 500;
     color: #ffffff;

@@ -485,7 +485,7 @@ const PARTNERS_CSS = `
   .rsc-partners__heading {
     margin: 0 0 10px;
     text-align: center;
-    font-family: 'Tablon', 'Arial Narrow', 'Arial', sans-serif;
+    font-family: var(--font-tablon), 'Arial', sans-serif;
     font-size: clamp(36px, 6vw, 64px);
     line-height: 1;
     font-weight: 600;
@@ -497,7 +497,7 @@ const PARTNERS_CSS = `
   .rsc-partners__subheading {
     margin: 0 0 56px;
     text-align: center;
-    font-family: 'Belepotan', 'Poppins', sans-serif;
+    font-family: var(--font-belepotan), var(--font-poppins), sans-serif;
     font-size: clamp(17px, 2.2vw, 24px);
     letter-spacing: 0.1em;
     text-transform: uppercase;
@@ -511,7 +511,7 @@ const PARTNERS_CSS = `
 
   .rsc-partners__lead {
     margin: 0 0 24px;
-    font-family: 'Poppins', sans-serif;
+    font-family: var(--font-poppins), sans-serif;
     font-size: clamp(18px, 2.2vw, 24px);
     font-weight: 500;
     line-height: 1.5;
@@ -520,7 +520,7 @@ const PARTNERS_CSS = `
 
   .rsc-partners__body {
     margin: 0;
-    font-family: 'Poppins', sans-serif;
+    font-family: var(--font-poppins), sans-serif;
     font-size: clamp(15px, 1.8vw, 18px);
     font-weight: 300;
     line-height: 1.7;
@@ -545,7 +545,7 @@ const PARTNERS_CSS = `
 
   .rsc-partners__card-title {
     margin: 0;
-    font-family: 'Tablon', 'Arial Narrow', 'Arial', sans-serif;
+    font-family: var(--font-tablon), 'Arial', sans-serif;
     font-size: clamp(18px, 2vw, 24px);
     line-height: 1.3;
     font-weight: 600;
@@ -561,7 +561,7 @@ const PARTNERS_CSS = `
     gap: 12px;
     width: 100%;
     padding: 16px 24px;
-    font-family: 'Poppins', sans-serif;
+    font-family: var(--font-poppins), sans-serif;
     font-size: 16px;
     font-weight: 500;
     background: var(--accent, #00c3d0);
@@ -587,7 +587,7 @@ const PARTNERS_CSS = `
   .rsc-partners__info-heading {
     margin: 0 0 40px;
     text-align: center;
-    font-family: 'Tablon', 'Arial Narrow', 'Arial', sans-serif;
+    font-family: var(--font-tablon), 'Arial', sans-serif;
     font-size: clamp(22px, 3vw, 34px);
     line-height: 1.2;
     font-weight: 600;
@@ -731,7 +731,7 @@ const PARTNERS_CSS = `
 
   .rsc-modal__title {
     margin: 0 0 6px;
-    font-family: 'Tablon', 'Arial Narrow', 'Arial', sans-serif;
+    font-family: var(--font-tablon), 'Arial', sans-serif;
     font-size: 26px;
     font-weight: 600;
     letter-spacing: 0.03em;
@@ -741,7 +741,7 @@ const PARTNERS_CSS = `
 
   .rsc-modal__subtitle {
     margin: 0 0 28px;
-    font-family: 'Poppins', sans-serif;
+    font-family: var(--font-poppins), sans-serif;
     font-size: 14px;
     color: #8e8e93;
   }
@@ -759,7 +759,7 @@ const PARTNERS_CSS = `
   }
 
   .rsc-modal__label {
-    font-family: 'Poppins', sans-serif;
+    font-family: var(--font-poppins), sans-serif;
     font-size: 13px;
     color: #8e8e93;
   }
@@ -770,7 +770,7 @@ const PARTNERS_CSS = `
 
   .rsc-modal__input {
     padding: 13px 16px;
-    font-family: 'Poppins', sans-serif;
+    font-family: var(--font-poppins), sans-serif;
     font-size: 15px;
     color: #ffffff;
     background: #060606;
@@ -798,14 +798,14 @@ const PARTNERS_CSS = `
   }
 
   .rsc-modal__error {
-    font-family: 'Poppins', sans-serif;
+    font-family: var(--font-poppins), sans-serif;
     font-size: 12px;
     color: #ff5a5a;
   }
 
   .rsc-modal__send-error {
     margin: 0;
-    font-family: 'Poppins', sans-serif;
+    font-family: var(--font-poppins), sans-serif;
     font-size: 13px;
     color: #ff5a5a;
   }
@@ -845,7 +845,7 @@ const PARTNERS_CSS = `
   .rsc-modal__social-add {
     align-self: flex-start;
     padding: 10px 16px;
-    font-family: 'Poppins', sans-serif;
+    font-family: var(--font-poppins), sans-serif;
     font-size: 13px;
     color: var(--accent, #00c3d0);
     background: transparent;
@@ -862,7 +862,7 @@ const PARTNERS_CSS = `
   .rsc-modal__submit {
     margin-top: 8px;
     padding: 15px 24px;
-    font-family: 'Poppins', sans-serif;
+    font-family: var(--font-poppins), sans-serif;
     font-size: 16px;
     font-weight: 500;
     background: var(--accent, #00c3d0);
@@ -904,7 +904,7 @@ const PARTNERS_CSS = `
 
   .rsc-modal__success-title {
     margin: 0 0 8px;
-    font-family: 'Tablon', 'Arial Narrow', 'Arial', sans-serif;
+    font-family: var(--font-tablon), 'Arial', sans-serif;
     font-size: 22px;
     font-weight: 600;
     letter-spacing: 0.03em;
@@ -914,7 +914,7 @@ const PARTNERS_CSS = `
 
   .rsc-modal__success-text {
     margin: 0 0 24px;
-    font-family: 'Poppins', sans-serif;
+    font-family: var(--font-poppins), sans-serif;
     font-size: 14px;
     color: #8e8e93;
   }

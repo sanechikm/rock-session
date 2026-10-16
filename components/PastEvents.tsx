@@ -128,7 +128,7 @@ const PAST_CSS = `
   .rsc-past__heading {
     margin: 0 0 10px;
     text-align: center;
-    font-family: 'Tablon', 'Arial Black', sans-serif;
+    font-family: var(--font-tablon), 'Arial', sans-serif;
     font-size: clamp(36px, 6vw, 64px);
     line-height: 1;
     font-weight: 600;
@@ -139,7 +139,7 @@ const PAST_CSS = `
   .rsc-past__subheading {
     margin: 0 0 64px;
     text-align: center;
-    font-family: 'Belepotan', 'Poppins', sans-serif;
+    font-family: var(--font-belepotan), var(--font-poppins), sans-serif;
     font-size: clamp(17px, 2.2vw, 24px);
     letter-spacing: 0.1em;
     text-transform: uppercase;
@@ -197,14 +197,14 @@ const PAST_CSS = `
   }
 
   .rsc-past-ticket__day {
-    font-family: 'Tablon', 'Arial Black', sans-serif;
+    font-family: var(--font-tablon), 'Arial', sans-serif;
     font-size: 54px;
     line-height: 1;
     color: var(--accent, #00c3d0);
   }
 
   .rsc-past-ticket__month {
-    font-family: 'Poppins', sans-serif;
+    font-family: var(--font-poppins), sans-serif;
     font-size: 15px;
     color: #ffffff;
   }
@@ -217,7 +217,7 @@ const PAST_CSS = `
 
   .rsc-past-ticket__title {
     margin: 0 0 12px;
-    font-family: 'Tablon', 'Arial Black', sans-serif;
+    font-family: var(--font-tablon), 'Arial', sans-serif;
     font-size: clamp(24px, 3vw, 36px);
     line-height: 1.1;
     font-weight: 600;
@@ -228,7 +228,7 @@ const PAST_CSS = `
   .rsc-past-ticket__description {
     margin: 0 0 12px;
     max-width: 620px;
-    font-family: 'Poppins', sans-serif;
+    font-family: var(--font-poppins), sans-serif;
     font-size: 15px;
     font-weight: 300;
     line-height: 1.6;
@@ -237,7 +237,7 @@ const PAST_CSS = `
 
   .rsc-past-ticket__venue {
     margin: 0 0 24px;
-    font-family: 'Poppins', sans-serif;
+    font-family: var(--font-poppins), sans-serif;
     font-size: 16px;
     font-weight: 500;
     color: #ffffff;
@@ -252,7 +252,7 @@ const PAST_CSS = `
   }
 
   .rsc-past-ticket__status {
-    font-family: 'Poppins', sans-serif;
+    font-family: var(--font-poppins), sans-serif;
     font-size: 24px;
     font-weight: 600;
     color: var(--accent, #00c3d0);
@@ -270,7 +270,7 @@ const PAST_CSS = `
     justify-content: center;
     min-width: 180px;
     padding: 14px 28px;
-    font-family: 'Poppins', sans-serif;
+    font-family: var(--font-poppins), sans-serif;
     font-size: 15px;
     font-weight: 500;
     border: 2px solid var(--accent, #00c3d0);
@@ -343,7 +343,7 @@ const PAST_CSS = `
     justify-content: center;
     min-width: 260px;
     padding: 16px 32px;
-    font-family: 'Poppins', sans-serif;
+    font-family: var(--font-poppins), sans-serif;
     font-size: 16px;
     font-weight: 500;
     background: var(--accent, #00c3d0);
