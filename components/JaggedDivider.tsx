@@ -32,5 +32,6 @@ const DIVIDER_CSS = `
     margin: 0;
     user-select: none;
     pointer-events: none; /* линия — чисто декоративная, клики проходят сквозь */
+    shape-rendering: crispEdges;
   }
 `;
