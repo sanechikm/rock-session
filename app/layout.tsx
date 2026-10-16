@@ -1,8 +1,6 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import localFont from 'next/font/local';
-import { Poppins } from 'next/font/google';
 
 /* Локальные шрифты проекта */
 const tablon = localFont({
@@ -16,12 +14,6 @@ const bicubik = localFont({
   variable: '--font-bicubik',
   weight: '400',
 });
-
-// const poppins = localFont({
-//   src: '../public/fonts/PoppinsCyr-Bold.otf',
-//   variable: '--font-poppins',
-//   weight: '300',
-// });
 
 export const metadata: Metadata = {
   title: 'RockSession Club',
