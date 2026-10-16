@@ -374,7 +374,7 @@ const MODAL_CSS = `
     gap: 10px;
     margin-bottom: 24px;
     padding: 10px 18px;
-    font-family: var(--font-poppins), sans-serif;
+    font-family: 'Poppins', sans-serif;
     font-size: 15px;
     font-weight: 600;
     color: #060606;
@@ -397,7 +397,7 @@ const MODAL_CSS = `
 
   .rsc-pm__description {
     margin: 0;
-    font-family: var(--font-poppins), sans-serif;
+    font-family: 'Poppins', sans-serif;
     font-size: 15px;
     font-weight: 300;
     line-height: 1.75;
@@ -409,7 +409,7 @@ const MODAL_CSS = `
     display: flex;
     align-items: center;
     gap: 10px;
-    font-family: var(--font-poppins), sans-serif;
+    font-family: 'Poppins', sans-serif;
     font-size: 15px;
     font-weight: 500;
     color: #ffffff;
@@ -471,14 +471,14 @@ const MODAL_CSS = `
   }
 
   .rsc-pm__act-name {
-    font-family: var(--font-poppins), sans-serif;
+    font-family: 'Poppins', sans-serif;
     font-size: 15px;
     font-weight: 600;
     color: #ffffff;
   }
 
   .rsc-pm__act-role {
-    font-family: var(--font-poppins), sans-serif;
+    font-family: 'Poppins', sans-serif;
     font-size: 12px;
     color: #8e8e93;
   }
@@ -521,14 +521,14 @@ const MODAL_CSS = `
   }
 
   .rsc-pm__crew-name {
-    font-family: var(--font-poppins), sans-serif;
+    font-family: 'Poppins', sans-serif;
     font-size: 14px;
     font-weight: 600;
     color: #ffffff;
   }
 
   .rsc-pm__crew-role {
-    font-family: var(--font-poppins), sans-serif;
+    font-family: 'Poppins', sans-serif;
     font-size: 12px;
     color: #8e8e93;
   }
@@ -574,7 +574,7 @@ const MODAL_CSS = `
     margin-top: 32px;
     min-width: 220px;
     padding: 15px 32px;
-    font-family: var(--font-poppins), sans-serif;
+    font-family: 'Poppins', sans-serif;
     font-size: 16px;
     font-weight: 500;
     text-decoration: none;
@@ -591,7 +591,7 @@ const MODAL_CSS = `
 
   .rsc-pm__past-note {
     margin: 32px 0 0;
-    font-family: var(--font-poppins), sans-serif;
+    font-family: 'Poppins', sans-serif;
     font-size: 15px;
     color: #8e8e93;
     border-top: 1px solid rgba(255, 255, 255, 0.08);

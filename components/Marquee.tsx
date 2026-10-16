@@ -67,7 +67,7 @@ const MARQUEE_CSS = `
 
   .rsc-marquee__text {
     flex-shrink: 0;
-    font-family: var(--font-poppins), sans-serif;
+    font-family: 'Poppins', sans-serif;
     font-size: 16px;
     font-weight: 600;
     letter-spacing: 0.14em;

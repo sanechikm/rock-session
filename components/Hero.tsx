@@ -179,7 +179,7 @@ const HERO_CSS = `
 
   .rsc-hero__tag {
     margin: 0 0 18px;
-    font-family: var(--font-belepotan), var(--font-poppins), sans-serif;
+    font-family: var(--font-bicubik), 'Poppins', sans-serif;
     font-size: clamp(16px, 1.8vw, 20px);
     letter-spacing: 0.14em;
     text-transform: uppercase;
@@ -202,7 +202,7 @@ const HERO_CSS = `
   .rsc-hero__description {
     margin: 0 auto 38px;
     max-width: 680px;
-    font-family: var(--font-poppins), sans-serif;
+    font-family: 'Poppins', sans-serif;
     font-size: clamp(15px, 1.8vw, 18px);
     font-weight: 300;
     line-height: 1.65;
@@ -215,7 +215,7 @@ const HERO_CSS = `
     flex-wrap: wrap;
     gap: 14px 48px;
     margin-bottom: 40px;
-    font-family: var(--font-poppins), sans-serif;
+    font-family: 'Poppins', sans-serif;
     font-size: clamp(15px, 1.8vw, 18px);
     font-weight: 500;
     color: #ffffff;
@@ -235,7 +235,7 @@ const HERO_CSS = `
     justify-content: center;
     min-width: 190px;
     padding: 13px 26px;
-    font-family: var(--font-poppins), sans-serif;
+    font-family: 'Poppins', sans-serif;
     font-size: 15px;
     font-weight: 500;
     text-decoration: none;

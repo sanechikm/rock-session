@@ -217,7 +217,7 @@ const NEWS_CSS = `
   .rsc-news__subheading {
     margin: 0 0 64px;
     text-align: center;
-    font-family: var(--font-belepotan), var(--font-poppins), sans-serif;
+    font-family: var(--font-bicubik), 'Poppins', sans-serif;
     font-size: clamp(17px, 2.2vw, 24px);
     letter-spacing: 0.1em;
     text-transform: uppercase;
@@ -272,7 +272,7 @@ const NEWS_CSS = `
   .rsc-news__date {
     flex-shrink: 0;
     width: 110px;
-    font-family: var(--font-poppins), sans-serif;
+    font-family: 'Poppins', sans-serif;
     font-size: 20px;
     font-weight: 600;
     color: var(--accent, #00c3d0);
@@ -287,7 +287,7 @@ const NEWS_CSS = `
   }
 
   .rsc-news__title {
-    font-family: var(--font-poppins), sans-serif;
+    font-family: 'Poppins', sans-serif;
     font-size: clamp(17px, 2vw, 22px);
     font-weight: 600;
     line-height: 1.35;
@@ -301,7 +301,7 @@ const NEWS_CSS = `
   }
 
   .rsc-news__excerpt {
-    font-family: var(--font-poppins), sans-serif;
+    font-family: 'Poppins', sans-serif;
     font-size: 15px;
     font-weight: 300;
     color: #8e8e93;
@@ -400,7 +400,7 @@ const NEWS_CSS = `
   .rsc-nm__date {
     display: block;
     margin-bottom: 10px;
-    font-family: var(--font-poppins), sans-serif;
+    font-family: 'Poppins', sans-serif;
     font-size: 14px;
     font-weight: 600;
     color: var(--accent, #00c3d0);
@@ -408,7 +408,7 @@ const NEWS_CSS = `
 
   .rsc-nm__title {
     margin: 0 0 20px;
-    font-family: var(--font-poppins), sans-serif;
+    font-family: 'Poppins', sans-serif;
     font-size: clamp(19px, 2.4vw, 24px);
     font-weight: 600;
     line-height: 1.35;
@@ -422,7 +422,7 @@ const NEWS_CSS = `
 
   .rsc-nm__text {
     margin: 0;
-    font-family: var(--font-poppins), sans-serif;
+    font-family: 'Poppins', sans-serif;
     font-size: 15px;
     font-weight: 300;
     line-height: 1.8;

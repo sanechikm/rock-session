@@ -674,7 +674,7 @@ const CSS = `
 
   .pn__title {
     margin: 0 0 4px;
-    font-family: var(--font-poppins), sans-serif;
+    font-family: 'Poppins', sans-serif;
     font-size: 30px;
     font-weight: 600;
     color: #ffffff;
@@ -682,7 +682,7 @@ const CSS = `
 
   .pn__subtitle {
     margin: 0;
-    font-family: var(--font-poppins), sans-serif;
+    font-family: 'Poppins', sans-serif;
     font-size: 13px;
     color: #5a5a5e;
   }
@@ -690,7 +690,7 @@ const CSS = `
   .pn__error {
     padding: 12px 16px;
     margin: 0 0 24px;
-    font-family: var(--font-poppins), sans-serif;
+    font-family: 'Poppins', sans-serif;
     font-size: 14px;
     color: #ff5a5a;
     background: rgba(255, 90, 90, 0.08);
@@ -699,7 +699,7 @@ const CSS = `
   }
 
   .pn__status {
-    font-family: var(--font-poppins), sans-serif;
+    font-family: 'Poppins', sans-serif;
     font-size: 14px;
     color: #5a5a5e;
   }
@@ -736,7 +736,7 @@ const CSS = `
     gap: 12px;
     flex-wrap: wrap;
     margin: 0 0 18px;
-    font-family: var(--font-poppins), sans-serif;
+    font-family: 'Poppins', sans-serif;
     font-size: 17px;
     font-weight: 600;
     color: #ffffff;
@@ -745,7 +745,7 @@ const CSS = `
   .pn__section-header .pn__section-title { margin: 0; }
 
   .pn__section-note {
-    font-family: var(--font-poppins), sans-serif;
+    font-family: 'Poppins', sans-serif;
     font-size: 12px;
     font-weight: 400;
     color: #5a5a5e;
@@ -756,7 +756,7 @@ const CSS = `
     align-items: center;
     gap: 10px;
     padding: 11px 20px;
-    font-family: var(--font-poppins), sans-serif;
+    font-family: 'Poppins', sans-serif;
     font-size: 13px;
     font-weight: 500;
     color: #060606;
@@ -808,17 +808,17 @@ const CSS = `
   /* Заявки */
   .pn__row--request { cursor: default; justify-content: space-between; }
   .pn__info { flex: 1; display: flex; flex-direction: column; gap: 4px; min-width: 0; }
-  .pn__row-title { font-family: var(--font-poppins), sans-serif; font-size: 15px; font-weight: 600; color: #ffffff; }
-  .pn__row-line { font-family: var(--font-poppins), sans-serif; font-size: 13px; font-weight: 300; color: #8e8e93; }
-  .pn__row-comment { font-family: var(--font-poppins), sans-serif; font-size: 12px; font-style: italic; color: #8e8e93; margin-top: 4px; }
-  .pn__row-date { font-family: var(--font-poppins), sans-serif; font-size: 11px; color: #464646; margin-top: 6px; }
+  .pn__row-title { font-family: 'Poppins', sans-serif; font-size: 15px; font-weight: 600; color: #ffffff; }
+  .pn__row-line { font-family: 'Poppins', sans-serif; font-size: 13px; font-weight: 300; color: #8e8e93; }
+  .pn__row-comment { font-family: 'Poppins', sans-serif; font-size: 12px; font-style: italic; color: #8e8e93; margin-top: 4px; }
+  .pn__row-date { font-family: 'Poppins', sans-serif; font-size: 11px; color: #464646; margin-top: 6px; }
 
   .pn__row-direction {
     display: inline-block;
     align-self: flex-start;
     margin-top: 2px;
     padding: 3px 10px;
-    font-family: var(--font-poppins), sans-serif;
+    font-family: 'Poppins', sans-serif;
     font-size: 11px;
     color: #060606;
     background: var(--accent, #00c3d0);
@@ -829,7 +829,7 @@ const CSS = `
     display: inline-block;
     margin-left: 8px;
     padding: 2px 8px;
-    font-family: var(--font-poppins), sans-serif;
+    font-family: 'Poppins', sans-serif;
     font-size: 10px;
     font-weight: 500;
     color: #060606;
@@ -862,7 +862,7 @@ const CSS = `
     grid-template-columns: 1.3fr 1fr 1.2fr 1fr auto;
     gap: 12px;
     padding: 0 18px 10px;
-    font-family: var(--font-poppins), sans-serif;
+    font-family: 'Poppins', sans-serif;
     font-size: 11px;
     font-weight: 600;
     letter-spacing: 0.06em;
@@ -879,7 +879,7 @@ const CSS = `
   }
 
   .pn__cell {
-    font-family: var(--font-poppins), sans-serif;
+    font-family: 'Poppins', sans-serif;
     font-size: 13px;
     color: #c9c9ce;
     overflow: hidden;
@@ -960,7 +960,7 @@ const CSS = `
   }
 
   .pn__showcase-name {
-    font-family: var(--font-poppins), sans-serif;
+    font-family: 'Poppins', sans-serif;
     font-size: 12px;
     font-weight: 500;
     color: #c9c9ce;
@@ -1043,7 +1043,7 @@ const CSS = `
 
   .pnm__title {
     margin: 0 0 24px;
-    font-family: var(--font-poppins), sans-serif;
+    font-family: 'Poppins', sans-serif;
     font-size: 22px;
     font-weight: 600;
     color: #ffffff;
@@ -1055,11 +1055,11 @@ const CSS = `
 
   .pnm__field { display: flex; flex-direction: column; gap: 8px; }
 
-  .pnm__label { font-family: var(--font-poppins), sans-serif; font-size: 13px; color: #8e8e93; }
+  .pnm__label { font-family: 'Poppins', sans-serif; font-size: 13px; color: #8e8e93; }
 
   .pnm__input {
     padding: 12px 14px;
-    font-family: var(--font-poppins), sans-serif;
+    font-family: 'Poppins', sans-serif;
     font-size: 14px;
     color: #ffffff;
     background: #060606;
@@ -1075,7 +1075,7 @@ const CSS = `
     display: flex;
     align-items: center;
     gap: 10px;
-    font-family: var(--font-poppins), sans-serif;
+    font-family: 'Poppins', sans-serif;
     font-size: 14px;
     color: #8e8e93;
     cursor: pointer;
@@ -1093,7 +1093,7 @@ const CSS = `
   }
   .pnm__logo-remove {
     padding: 8px 14px;
-    font-family: var(--font-poppins), sans-serif;
+    font-family: 'Poppins', sans-serif;
     font-size: 13px;
     color: #ff5a5a;
     background: transparent;
@@ -1109,7 +1109,7 @@ const CSS = `
 
   .pnm__upload-btn {
     padding: 11px 16px;
-    font-family: var(--font-poppins), sans-serif;
+    font-family: 'Poppins', sans-serif;
     font-size: 13px;
     color: #ffffff;
     background: #1e1e1e;
@@ -1121,14 +1121,14 @@ const CSS = `
   }
   .pnm__upload-btn:hover:not(:disabled) { border-color: var(--accent, #00c3d0); }
   .pnm__upload-btn:disabled { opacity: 0.6; }
-  .pnm__or { font-family: var(--font-poppins), sans-serif; font-size: 13px; color: #464646; white-space: nowrap; }
+  .pnm__or { font-family: 'Poppins', sans-serif; font-size: 13px; color: #464646; white-space: nowrap; }
 
-  .pnm__error { margin: 0; font-family: var(--font-poppins), sans-serif; font-size: 13px; color: #ff5a5a; }
+  .pnm__error { margin: 0; font-family: 'Poppins', sans-serif; font-size: 13px; color: #ff5a5a; }
 
   .pnm__submit {
     margin-top: 8px;
     padding: 14px 24px;
-    font-family: var(--font-poppins), sans-serif;
+    font-family: 'Poppins', sans-serif;
     font-size: 15px;
     font-weight: 500;
     color: #060606;

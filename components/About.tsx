@@ -271,7 +271,7 @@ const ABOUT_CSS = `
 
   .rsc-about__subheading {
     margin: 0 0 56px;
-    font-family: var(--font-belepotan), var(--font-poppins), sans-serif;
+    font-family: var(--font-bicubik), 'Poppins', sans-serif;
     font-size: clamp(17px, 2.2vw, 24px);
     letter-spacing: 0.1em;
     text-transform: uppercase;
@@ -421,7 +421,7 @@ const ABOUT_CSS = `
   .rsc-about__description {
     max-width: 780px;
     margin: 0 auto;
-    font-family: var(--font-poppins), sans-serif;
+    font-family: 'Poppins', sans-serif;
     font-size: clamp(15px, 1.8vw, 18px);
     font-weight: 300;
     line-height: 1.75;

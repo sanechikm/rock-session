@@ -11,18 +11,17 @@ const tablon = localFont({
   weight: '600',
 });
 
-const belepotan = localFont({
-  src: '../public/fonts/Belepotan Rus.otf',
-  variable: '--font-belepotan',
+const bicubik = localFont({
+  src: '../public/fonts/Bicubik.otf',
+  variable: '--font-bicubik',
   weight: '400',
 });
 
-/* Poppins с Google Fonts */
-const poppins = Poppins({
-  subsets: ['latin'],
-  weight: ['300', '400', '500', '600'],
-  variable: '--font-poppins',
-});
+// const poppins = localFont({
+//   src: '../public/fonts/PoppinsCyr-Bold.otf',
+//   variable: '--font-poppins',
+//   weight: '300',
+// });
 
 export const metadata: Metadata = {
   title: 'RockSession Club',
@@ -33,7 +32,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html
       lang="ru"
-      className={`${tablon.variable} ${belepotan.variable} ${poppins.variable} h-full antialiased`}
+      className={`${tablon.variable} ${bicubik.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col">{children}</body>
     </html>

@@ -419,7 +419,7 @@ const GALLERY_CSS = `
 
   .gl__title {
     margin: 0 0 4px;
-    font-family: var(--font-poppins), sans-serif;
+    font-family: 'Poppins', sans-serif;
     font-size: 30px;
     font-weight: 600;
     color: #ffffff;
@@ -427,7 +427,7 @@ const GALLERY_CSS = `
 
   .gl__subtitle {
     margin: 0;
-    font-family: var(--font-poppins), sans-serif;
+    font-family: 'Poppins', sans-serif;
     font-size: 13px;
     color: #5a5a5e;
   }
@@ -437,7 +437,7 @@ const GALLERY_CSS = `
     align-items: center;
     gap: 10px;
     padding: 12px 22px;
-    font-family: var(--font-poppins), sans-serif;
+    font-family: 'Poppins', sans-serif;
     font-size: 14px;
     font-weight: 500;
     color: #060606;
@@ -476,7 +476,7 @@ const GALLERY_CSS = `
   .gl__filter-label {
     display: block;
     margin-bottom: 8px;
-    font-family: var(--font-poppins), sans-serif;
+    font-family: 'Poppins', sans-serif;
     font-size: 13px;
     color: #8e8e93;
   }
@@ -484,7 +484,7 @@ const GALLERY_CSS = `
   .gl__select {
     width: 100%;
     padding: 13px 44px 13px 16px;
-    font-family: var(--font-poppins), sans-serif;
+    font-family: 'Poppins', sans-serif;
     font-size: 14px;
     font-weight: 500;
     color: #ffffff;
@@ -524,7 +524,7 @@ const GALLERY_CSS = `
 
   .gl__filter-hint {
     margin: 8px 0 0;
-    font-family: var(--font-poppins), sans-serif;
+    font-family: 'Poppins', sans-serif;
     font-size: 12px;
     color: #464646;
   }
@@ -532,7 +532,7 @@ const GALLERY_CSS = `
   .gl__error {
     padding: 12px 16px;
     margin: 0 0 24px;
-    font-family: var(--font-poppins), sans-serif;
+    font-family: 'Poppins', sans-serif;
     font-size: 14px;
     color: #ff5a5a;
     background: rgba(255, 90, 90, 0.08);
@@ -541,7 +541,7 @@ const GALLERY_CSS = `
   }
 
   .gl__status {
-    font-family: var(--font-poppins), sans-serif;
+    font-family: 'Poppins', sans-serif;
     font-size: 14px;
     color: #5a5a5e;
   }
@@ -648,7 +648,7 @@ const GALLERY_CSS = `
 
   .gl__hint {
     margin: 16px 0 0;
-    font-family: var(--font-poppins), sans-serif;
+    font-family: 'Poppins', sans-serif;
     font-size: 13px;
     color: #464646;
   }

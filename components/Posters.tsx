@@ -79,7 +79,7 @@ const POSTERS_CSS = `
   .rsc-posters__subheading {
     margin: 0 0 64px;
     text-align: center;
-    font-family: var(--font-belepotan), var(--font-poppins), sans-serif;
+    font-family: var(--font-bicubik), 'Poppins', sans-serif;
     font-size: clamp(17px, 2.2vw, 24px);
     letter-spacing: 0.1em;
     text-transform: uppercase;
@@ -88,7 +88,7 @@ const POSTERS_CSS = `
 
   .rsc-posters__empty {
     text-align: center;
-    font-family: var(--font-poppins), sans-serif;
+    font-family: 'Poppins', sans-serif;
     color: #8e8e93;
   }
 
@@ -164,7 +164,7 @@ const POSTERS_CSS = `
   .rsc-ticket--accent .rsc-ticket__day { color: #060606; }
 
   .rsc-ticket__month {
-    font-family: var(--font-poppins), sans-serif;
+    font-family: 'Poppins', sans-serif;
     font-size: 15px;
     color: #ffffff;
   }
@@ -192,7 +192,7 @@ const POSTERS_CSS = `
   .rsc-ticket__description {
     margin: 0 0 12px;
     max-width: 620px; /* длинный текст не тянется к корешку */
-    font-family: var(--font-poppins), sans-serif;
+    font-family: 'Poppins', sans-serif;
     font-size: 15px;
     font-weight: 300;
     line-height: 1.6;
@@ -203,7 +203,7 @@ const POSTERS_CSS = `
 
   .rsc-ticket__venue {
     margin: 0 0 24px;
-    font-family: var(--font-poppins), sans-serif;
+    font-family: 'Poppins', sans-serif;
     font-size: 16px;
     font-weight: 500;
     color: #ffffff;
@@ -220,7 +220,7 @@ const POSTERS_CSS = `
   }
 
   .rsc-ticket__price {
-    font-family: var(--font-poppins), sans-serif;
+    font-family: 'Poppins', sans-serif;
     font-size: 24px;
     font-weight: 600;
     color: var(--accent, #00c3d0);
@@ -240,7 +240,7 @@ const POSTERS_CSS = `
     justify-content: center;
     min-width: 180px;
     padding: 14px 28px;
-    font-family: var(--font-poppins), sans-serif;
+    font-family: 'Poppins', sans-serif;
     font-size: 15px;
     font-weight: 500;
     border: 2px solid var(--accent, #00c3d0);
@@ -434,7 +434,7 @@ const POSTERS_CSS = `
     gap: 10px;
     margin-bottom: 24px;
     padding: 10px 18px;
-    font-family: var(--font-poppins), sans-serif;
+    font-family: 'Poppins', sans-serif;
     font-size: 15px;
     font-weight: 600;
     color: #060606;
@@ -457,7 +457,7 @@ const POSTERS_CSS = `
 
   .rsc-pm__description {
     margin: 0;
-    font-family: var(--font-poppins), sans-serif;
+    font-family: 'Poppins', sans-serif;
     font-size: 15px;
     font-weight: 300;
     line-height: 1.75;
@@ -470,7 +470,7 @@ const POSTERS_CSS = `
     display: flex;
     align-items: center;
     gap: 10px;
-    font-family: var(--font-poppins), sans-serif;
+    font-family: 'Poppins', sans-serif;
     font-size: 15px;
     font-weight: 500;
     color: #ffffff;
@@ -531,14 +531,14 @@ const POSTERS_CSS = `
   .rsc-pm__act-avatar--icon { color: rgba(255, 255, 255, 0.15); background: rgba(255, 255, 255, 0.06); }
 
   .rsc-pm__act-name {
-    font-family: var(--font-poppins), sans-serif;
+    font-family: 'Poppins', sans-serif;
     font-size: 15px;
     font-weight: 600;
     color: #ffffff;
   }
 
   .rsc-pm__act-role {
-    font-family: var(--font-poppins), sans-serif;
+    font-family: 'Poppins', sans-serif;
     font-size: 12px;
     color: #8e8e93;
   }
@@ -582,14 +582,14 @@ const POSTERS_CSS = `
   }
 
   .rsc-pm__crew-name {
-    font-family: var(--font-poppins), sans-serif;
+    font-family: 'Poppins', sans-serif;
     font-size: 14px;
     font-weight: 600;
     color: #ffffff;
   }
 
   .rsc-pm__crew-role {
-    font-family: var(--font-poppins), sans-serif;
+    font-family: 'Poppins', sans-serif;
     font-size: 12px;
     color: #8e8e93;
   }
@@ -637,7 +637,7 @@ const POSTERS_CSS = `
     margin-top: 32px;
     min-width: 220px;
     padding: 15px 32px;
-    font-family: var(--font-poppins), sans-serif;
+    font-family: 'Poppins', sans-serif;
     font-size: 16px;
     font-weight: 500;
     text-decoration: none;

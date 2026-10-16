@@ -459,7 +459,7 @@ const NEWS_CSS = `
 
   .nw__title {
     margin: 0 0 4px;
-    font-family: var(--font-poppins), sans-serif;
+    font-family: 'Poppins', sans-serif;
     font-size: 30px;
     font-weight: 600;
     color: #ffffff;
@@ -467,7 +467,7 @@ const NEWS_CSS = `
 
   .nw__subtitle {
     margin: 0;
-    font-family: var(--font-poppins), sans-serif;
+    font-family: 'Poppins', sans-serif;
     font-size: 13px;
     color: #5a5a5e;
   }
@@ -477,7 +477,7 @@ const NEWS_CSS = `
     align-items: center;
     gap: 10px;
     padding: 12px 22px;
-    font-family: var(--font-poppins), sans-serif;
+    font-family: 'Poppins', sans-serif;
     font-size: 14px;
     font-weight: 500;
     color: #060606;
@@ -496,7 +496,7 @@ const NEWS_CSS = `
   .nw__error {
     padding: 12px 16px;
     margin: 0 0 24px;
-    font-family: var(--font-poppins), sans-serif;
+    font-family: 'Poppins', sans-serif;
     font-size: 14px;
     color: #ff5a5a;
     background: rgba(255, 90, 90, 0.08);
@@ -505,7 +505,7 @@ const NEWS_CSS = `
   }
 
   .nw__status {
-    font-family: var(--font-poppins), sans-serif;
+    font-family: 'Poppins', sans-serif;
     font-size: 14px;
     color: #5a5a5e;
   }
@@ -576,20 +576,20 @@ const NEWS_CSS = `
   }
 
   .nw__row-date {
-    font-family: var(--font-poppins), sans-serif;
+    font-family: 'Poppins', sans-serif;
     font-size: 13px;
     color: #8e8e93;
   }
 
   .nw__row-title {
-    font-family: var(--font-poppins), sans-serif;
+    font-family: 'Poppins', sans-serif;
     font-size: 16px;
     font-weight: 600;
     color: #ffffff;
   }
 
   .nw__row-excerpt {
-    font-family: var(--font-poppins), sans-serif;
+    font-family: 'Poppins', sans-serif;
     font-size: 14px;
     font-weight: 300;
     line-height: 1.5;
@@ -635,7 +635,7 @@ const NEWS_CSS = `
 
   .nw__hint {
     margin: 16px 0 0;
-    font-family: var(--font-poppins), sans-serif;
+    font-family: 'Poppins', sans-serif;
     font-size: 13px;
     color: #464646;
   }
@@ -697,7 +697,7 @@ const NEWS_CSS = `
 
   .nwm__title {
     margin: 0 0 24px;
-    font-family: var(--font-poppins), sans-serif;
+    font-family: 'Poppins', sans-serif;
     font-size: 22px;
     font-weight: 600;
     color: #ffffff;
@@ -716,14 +716,14 @@ const NEWS_CSS = `
   }
 
   .nwm__label {
-    font-family: var(--font-poppins), sans-serif;
+    font-family: 'Poppins', sans-serif;
     font-size: 13px;
     color: #8e8e93;
   }
 
   .nwm__input {
     padding: 12px 14px;
-    font-family: var(--font-poppins), sans-serif;
+    font-family: 'Poppins', sans-serif;
     font-size: 14px;
     color: #ffffff;
     background: #060606;
@@ -749,7 +749,7 @@ const NEWS_CSS = `
 
   .nwm__error {
     margin: 0;
-    font-family: var(--font-poppins), sans-serif;
+    font-family: 'Poppins', sans-serif;
     font-size: 13px;
     color: #ff5a5a;
   }
@@ -757,7 +757,7 @@ const NEWS_CSS = `
   .nwm__submit {
     margin-top: 8px;
     padding: 14px 24px;
-    font-family: var(--font-poppins), sans-serif;
+    font-family: 'Poppins', sans-serif;
     font-size: 15px;
     font-weight: 500;
     color: #060606;

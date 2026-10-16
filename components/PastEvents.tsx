@@ -139,7 +139,7 @@ const PAST_CSS = `
   .rsc-past__subheading {
     margin: 0 0 64px;
     text-align: center;
-    font-family: var(--font-belepotan), var(--font-poppins), sans-serif;
+    font-family: var(--font-bicubik), 'Poppins', sans-serif;
     font-size: clamp(17px, 2.2vw, 24px);
     letter-spacing: 0.1em;
     text-transform: uppercase;
@@ -204,7 +204,7 @@ const PAST_CSS = `
   }
 
   .rsc-past-ticket__month {
-    font-family: var(--font-poppins), sans-serif;
+    font-family: 'Poppins', sans-serif;
     font-size: 15px;
     color: #ffffff;
   }
@@ -228,7 +228,7 @@ const PAST_CSS = `
   .rsc-past-ticket__description {
     margin: 0 0 12px;
     max-width: 620px;
-    font-family: var(--font-poppins), sans-serif;
+    font-family: 'Poppins', sans-serif;
     font-size: 15px;
     font-weight: 300;
     line-height: 1.6;
@@ -237,7 +237,7 @@ const PAST_CSS = `
 
   .rsc-past-ticket__venue {
     margin: 0 0 24px;
-    font-family: var(--font-poppins), sans-serif;
+    font-family: 'Poppins', sans-serif;
     font-size: 16px;
     font-weight: 500;
     color: #ffffff;
@@ -252,7 +252,7 @@ const PAST_CSS = `
   }
 
   .rsc-past-ticket__status {
-    font-family: var(--font-poppins), sans-serif;
+    font-family: 'Poppins', sans-serif;
     font-size: 24px;
     font-weight: 600;
     color: var(--accent, #00c3d0);
@@ -270,7 +270,7 @@ const PAST_CSS = `
     justify-content: center;
     min-width: 180px;
     padding: 14px 28px;
-    font-family: var(--font-poppins), sans-serif;
+    font-family: 'Poppins', sans-serif;
     font-size: 15px;
     font-weight: 500;
     border: 2px solid var(--accent, #00c3d0);
@@ -343,7 +343,7 @@ const PAST_CSS = `
     justify-content: center;
     min-width: 260px;
     padding: 16px 32px;
-    font-family: var(--font-poppins), sans-serif;
+    font-family: 'Poppins', sans-serif;
     font-size: 16px;
     font-weight: 500;
     background: var(--accent, #00c3d0);

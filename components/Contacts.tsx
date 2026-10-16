@@ -140,11 +140,11 @@ const CONTACTS_CSS = `
 
   .rsc-contacts__subheading {
     margin: 0 0 64px;
-    font-family: var(--font-belepotan), var(--font-poppins), sans-serif;
+    font-family: var(--font-bicubik), 'Poppins', sans-serif;
     font-size: clamp(17px, 2.2vw, 24px);
     letter-spacing: 0.1em;
     text-transform: uppercase;
-    color: #00c3d0;
+    color: var(--accent, #00c3d0);
   }
 
   /* Телефон */
@@ -156,14 +156,14 @@ const CONTACTS_CSS = `
   }
 
   .rsc-contacts__phone-label {
-    font-family: var(--font-poppins), sans-serif;
+    font-family: 'Poppins', sans-serif;
     font-size: 17px;
     font-weight: 600;
     color: #ffffff;
   }
 
   .rsc-contacts__phone {
-    font-family: var(--font-poppins), sans-serif;
+    font-family: 'Poppins', sans-serif;
     font-size: clamp(20px, 2.6vw, 26px);
     font-weight: 500;
     color: #ffffff;
@@ -172,7 +172,7 @@ const CONTACTS_CSS = `
   }
 
   .rsc-contacts__phone:hover {
-    color: #00c3d0;
+    color: var(--accent, #00c3d0);
   }
 
   /* Соцсети */
@@ -188,7 +188,7 @@ const CONTACTS_CSS = `
     justify-content: center;
     width: 56px;
     height: 56px;
-    color: #00c3d0;
+    color: var(--accent, #00c3d0);
     transition: transform 0.25s ease, color 0.25s ease;
   }
 

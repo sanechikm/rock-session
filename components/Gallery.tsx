@@ -211,7 +211,7 @@ const GALLERY_CSS = `
   .rsc-gallery__subheading {
     margin: 0 0 56px;
     text-align: center;
-    font-family: var(--font-belepotan), var(--font-poppins), sans-serif;
+    font-family: var(--font-bicubik), 'Poppins', sans-serif;
     font-size: clamp(17px, 2.2vw, 24px);
     letter-spacing: 0.1em;
     text-transform: uppercase;
@@ -290,7 +290,7 @@ const GALLERY_CSS = `
     justify-content: center;
     min-width: 260px;
     padding: 16px 32px;
-    font-family: var(--font-poppins), sans-serif;
+    font-family: 'Poppins', sans-serif;
     font-size: 16px;
     font-weight: 500;
     background: var(--accent, #00c3d0);

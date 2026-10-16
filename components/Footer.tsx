@@ -171,7 +171,7 @@ const FOOTER_CSS = `
   }
 
   .rsc-footer__link {
-    font-family: var(--font-poppins), sans-serif;
+    font-family: 'Poppins', sans-serif;
     font-size: 15px;
     font-weight: 500;
     color: #ffffff;
@@ -180,7 +180,7 @@ const FOOTER_CSS = `
   }
 
   .rsc-footer__link:hover {
-    color: #00c3d0;
+    color: var(--accent, #00c3d0);
   }
 
   /* Соцсети — белые */
@@ -200,7 +200,7 @@ const FOOTER_CSS = `
 
   .rsc-footer__social:hover {
     transform: translateY(-3px);
-    color: #00c3d0;
+    color: var(--accent, #00c3d0);
   }
 
   /* Юридические ссылки */
@@ -213,7 +213,7 @@ const FOOTER_CSS = `
   }
 
   .rsc-footer__legal-link {
-    font-family: var(--font-poppins), sans-serif;
+    font-family: 'Poppins', sans-serif;
     font-size: 14px;
     color: #8e8e93;
     text-decoration: none;
@@ -230,7 +230,7 @@ const FOOTER_CSS = `
     flex-direction: column;
     gap: 6px;
     margin-bottom: 32px;
-    font-family: var(--font-poppins), sans-serif;
+    font-family: 'Poppins', sans-serif;
     font-size: 14px;
     color: #8e8e93;
   }
@@ -238,7 +238,7 @@ const FOOTER_CSS = `
   /* Копирайт */
   .rsc-footer__copy {
     margin: 0;
-    font-family: var(--font-poppins), sans-serif;
+    font-family: 'Poppins', sans-serif;
     font-size: 14px;
     color: #464646;
   }

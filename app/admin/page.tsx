@@ -414,7 +414,7 @@ const SETTINGS_CSS = `
   }
 
   .set__loading {
-    font-family: var(--font-poppins), sans-serif;
+    font-family: 'Poppins', sans-serif;
     color: #8e8e93;
   }
 
@@ -425,7 +425,7 @@ const SETTINGS_CSS = `
 
   .set__title {
     margin: 0 0 6px;
-    font-family: var(--font-poppins), sans-serif;
+    font-family: 'Poppins', sans-serif;
     font-size: 30px;
     font-weight: 600;
     color: #ffffff;
@@ -433,7 +433,7 @@ const SETTINGS_CSS = `
 
   .set__subtitle {
     margin: 0;
-    font-family: var(--font-poppins), sans-serif;
+    font-family: 'Poppins', sans-serif;
     font-size: 14px;
     color: #5a5a5e;
   }
@@ -444,7 +444,7 @@ const SETTINGS_CSS = `
     gap: 10px;
     padding: 12px 16px;
     margin: 0 0 24px;
-    font-family: var(--font-poppins), sans-serif;
+    font-family: 'Poppins', sans-serif;
     font-size: 14px;
     color: #ff5a5a;
     background: rgba(255, 90, 90, 0.08);
@@ -481,21 +481,21 @@ const SETTINGS_CSS = `
 
   .set__section-title {
     margin: 0;
-    font-family: var(--font-poppins), sans-serif;
+    font-family: 'Poppins', sans-serif;
     font-size: 18px;
     font-weight: 600;
     color: #ffffff;
   }
 
   .set__accent-name {
-    font-family: var(--font-poppins), sans-serif;
+    font-family: 'Poppins', sans-serif;
     font-size: 13px;
     font-weight: 500;
     letter-spacing: 0.02em;
   }
 
   .set__section-note {
-    font-family: var(--font-poppins), sans-serif;
+    font-family: 'Poppins', sans-serif;
     font-size: 13px;
     color: #5a5a5e;
   }
@@ -596,7 +596,7 @@ const SETTINGS_CSS = `
     width: 26px;
     height: 26px;
     flex-shrink: 0;
-    font-family: var(--font-poppins), sans-serif;
+    font-family: 'Poppins', sans-serif;
     font-size: 12px;
     font-weight: 600;
     color: #5a5a5e;
@@ -611,7 +611,7 @@ const SETTINGS_CSS = `
 
   .set__block-title {
     flex: 1;
-    font-family: var(--font-poppins), sans-serif;
+    font-family: 'Poppins', sans-serif;
     font-size: 15px;
     font-weight: 500;
     color: #ffffff;
@@ -685,7 +685,7 @@ const SETTINGS_CSS = `
   /* ---------- Прочее ---------- */
   .set__hint {
     margin: 16px 0 0;
-    font-family: var(--font-poppins), sans-serif;
+    font-family: 'Poppins', sans-serif;
     font-size: 13px;
     line-height: 1.6;
     color: #5a5a5e;
@@ -700,7 +700,7 @@ const SETTINGS_CSS = `
     align-items: center;
     gap: 10px;
     padding: 13px 22px;
-    font-family: var(--font-poppins), sans-serif;
+    font-family: 'Poppins', sans-serif;
     font-size: 14px;
     font-weight: 500;
     color: #060606;
