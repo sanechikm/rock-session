@@ -186,12 +186,11 @@ const HERO_CSS = `
     color: var(--accent, #00c3d0);
   }
 
-  /* Заголовок: уменьшен, начертание корректируется шрифтом Tablon,
-     запасной вариант сделан легче через font-weight и разрядку */
+  /* Заголовок */
   .rsc-hero__title {
     margin: 0 0 26px;
     font-family: var(--font-tablon), 'Arial', sans-serif;
-    font-size: clamp(40px, 6.5vw, 84px);
+    font-size: clamp(40px, 6.5vw, 72px);
     line-height: 1;
     font-weight: 600;
     letter-spacing: 0.03em;

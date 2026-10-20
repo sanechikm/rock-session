@@ -48,17 +48,7 @@ const SOCIAL_ICONS: Record<string, React.ReactNode> = {
     </svg>
   ),
   max: (
-    <svg viewBox="0 0 24 24" width="26" height="26" fill="currentColor" aria-hidden="true">
-      <circle cx="12" cy="12" r="10" />
-      <path
-        d="M7.5 9.5 12 14l4.5-4.5M7.5 13.5 12 18l4.5-4.5"
-        fill="none"
-        stroke="#060606"
-        strokeWidth="1.8"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </svg>
+    <img src="/max.svg" alt="MAX" width={24} height={24} />
   ),
 };
 

@@ -56,7 +56,7 @@ export default async function Posters() {
 const POSTERS_CSS = `
   .rsc-posters {
     background: #060606;
-    padding: 110px 24px 40px;
+    padding: 110px 24px 110px;
     overflow-x: clip; /* сдвиг билета при hover не расширяет страницу */
   }
 

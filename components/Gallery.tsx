@@ -170,7 +170,7 @@ export default function Gallery() {
 const GALLERY_CSS = `
   .rsc-gallery {
     background: #060606;
-    padding: 110px 24px 120px;
+    padding: 110px 24px 70px;
     overflow-x: clip;
   }
 

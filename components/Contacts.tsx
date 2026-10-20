@@ -101,7 +101,7 @@ export default function Contacts() {
 const CONTACTS_CSS = `
   .rsc-contacts {
     background: #060606;
-    padding: 110px 24px 140px;
+    padding: 110px 24px 110px;
   }
 
   /* Каскадное появление при загрузке */

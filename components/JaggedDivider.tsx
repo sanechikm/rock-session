@@ -3,7 +3,7 @@
 // Вставляется автоматически между секциями на главной, в админке не управляется.
 
 /* Сколько вариантов линий лежит в public/dividers/ (1.svg, 2.svg, …) */
-const VARIANT_COUNT = 8;
+const VARIANT_COUNT = 3;
 
 export default function JaggedDivider({ index }: { index: number }) {
   /* Варианты чередуются по порядку: 1, 2, 3, 4, 5, 1, 2… */

@@ -36,7 +36,7 @@ const BLOCK_COMPONENTS: Record<string, React.ReactNode> = {
   posters: (
     <>
       <Posters />
-      <PastEvents />
+      {/* <PastEvents /> */}
     </>
   ),
   partners: <Partners />,
