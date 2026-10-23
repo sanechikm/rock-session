@@ -4,6 +4,7 @@
 // Если будущих афиш нет — блок не рендерится.
 
 import { supabase } from '@/lib/supabase';
+import LavaButton from './LavaButton';
 import AnchorLink from './AnchorLink';
 
 const MONTHS_RU = [
@@ -90,14 +91,10 @@ export default async function Hero() {
 
           <div className="rsc-hero__actions">
             {event.ticket_url && (
-              <a
-                href={event.ticket_url}
+              <LavaButton
+                ticketUrl={event.ticket_url}
                 className="rsc-hero__btn rsc-hero__btn--primary"
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                Купить билет
-              </a>
+              />
             )}
             <AnchorLink
               href="#posters"
@@ -232,6 +229,7 @@ const HERO_CSS = `
     display: inline-flex;
     align-items: center;
     justify-content: center;
+    cursor: pointer;
     min-width: 190px;
     padding: 13px 26px;
     font-family: 'Poppins', sans-serif;

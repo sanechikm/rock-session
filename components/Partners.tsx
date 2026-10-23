@@ -25,6 +25,13 @@ type Partner = {
   logo: string | null;
 };
 
+/* Старые записи хранят подписанные ссылки (/object/sign/…?token=…),
+   токен которых истекает — превращаем в публичный вид на лету */
+const publicLogoUrl = (url: string) =>
+  url.includes('/object/sign/')
+    ? url.replace('/object/sign/', '/object/public/').split('?')[0]
+    : url;
+
 type FormData = {
   name: string;
   company: string;
@@ -77,11 +84,16 @@ export default function Partners() {
   /* Логотипы информационных партнёров */
   useEffect(() => {
     (async () => {
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from('partners')
         .select('id, name, logo')
         .eq('visible', true)
+        .eq('show_on_site', true) // только отмеченные «показывать на главной» в админке
         .order('sort_order', { ascending: true });
+      if (error) {
+        // Ошибку видно в DevTools → Console; чаще всего это RLS-политика таблицы partners
+        console.error('partners: не удалось загрузить логотипы:', error.message);
+      }
       setPartners(data || []);
     })();
   }, []);
@@ -170,8 +182,10 @@ export default function Partners() {
 
   /* Логотипы с логотипами: бегущая лента при переполнении */
   const logos = partners.filter((p) => p.logo);
-  const scrollDesktop = logos.length > 8;
-  const scrollMobile = logos.length > 4;
+  // Десктоп: больше 6 — бегущая строка; мобильный: больше 2.
+  // Иначе логотипы просто стоят в ряд без повторов.
+  const scroll = logos.length > 6;
+  const scrollMobile = logos.length > 2;
 
   return (
     <>
@@ -237,22 +251,39 @@ export default function Partners() {
               <div
                 className={
                   'rsc-partners__logos' +
-                  (scrollDesktop ? ' rsc-logos--scroll' : '') +
-                  (scrollMobile && !scrollDesktop ? ' rsc-logos--scroll-mobile' : '')
+                  (scroll ? ' rsc-logos--scroll' : '') +
+                  (scrollMobile ? ' rsc-logos--scroll-mobile' : '')
                 }
               >
                 <div className="rsc-partners__logos-track">
-                  {/* Две копии для бесшовной ленты */}
-                  {[...logos, ...logos].map((pl, i) => (
+                  {logos.map((pl) => (
                     <img
-                      key={`${pl.id}-${i}`}
-                      src={pl.logo!}
+                      key={pl.id}
+                      src={publicLogoUrl(pl.logo!)}
                       alt={pl.name}
                       title={pl.name}
                       className="rsc-partners__logo"
-                      loading="lazy"
+                      onError={(e) => {
+                        (e.currentTarget as HTMLImageElement).style.display = 'none';
+                      }}
                     />
                   ))}
+                  {/* Вторая копия для бесшовной ленты: скрыта в статичном
+                      режиме, показывается только в бегущей строке (CSS) */}
+                  <span className="rsc-partners__logos-copy" aria-hidden="true">
+                    {logos.map((pl) => (
+                      <img
+                        key={`${pl.id}-copy`}
+                        src={publicLogoUrl(pl.logo!)}
+                        alt=""
+                        title={pl.name}
+                        className="rsc-partners__logo"
+                        onError={(e) => {
+                          (e.currentTarget as HTMLImageElement).style.display = 'none';
+                        }}
+                      />
+                    ))}
+                  </span>
                 </div>
               </div>
             </>
@@ -438,7 +469,7 @@ export default function Partners() {
 const PARTNERS_CSS = `
   .rsc-partners {
     background: #060606;
-    padding: 110px 24px 120px;
+    padding: 120px 24px;
     overflow-x: clip;
   }
 
@@ -605,35 +636,69 @@ const PARTNERS_CSS = `
     display: contents; /* статичный режим: логотипы лежат в общем flex */
   }
 
-  /* Бегущая лента: края затемнены, логотипы въезжают справа и уходят влево */
-  .rsc-logos--scroll,
-  .rsc-logos--scroll-mobile {
-    display: block;
-    overflow: hidden;
-    flex-wrap: nowrap;
-    /* Затемнение по краям */
-    -webkit-mask-image: linear-gradient(90deg, transparent, #000 12%, #000 88%, transparent);
-    mask-image: linear-gradient(90deg, transparent, #000 12%, #000 88%, transparent);
+  /* Вторая копия ленты: видна только в режиме бегущей строки */
+  .rsc-partners__logos-copy {
+    display: none;
   }
 
-  .rsc-logos--scroll .rsc-partners__logos-track,
-  .rsc-logos--scroll-mobile .rsc-partners__logos-track {
-    display: flex;
-    align-items: center;
-    gap: 56px;
-    width: max-content;
-    padding-right: 56px; /* шов между копиями */
-    will-change: transform;
+  /* Бегущая лента: края затемнены, логотипы въезжают справа и уходят влево.
+     Десктоп — при >6 логотипов */
+  @media (min-width: 641px) {
+    .rsc-logos--scroll {
+      display: block;
+      overflow: hidden;
+      flex-wrap: nowrap;
+      /* Затемнение по краям */
+      -webkit-mask-image: linear-gradient(90deg, transparent, #000 12%, #000 88%, transparent);
+      mask-image: linear-gradient(90deg, transparent, #000 12%, #000 88%, transparent);
+    }
+
+    .rsc-logos--scroll .rsc-partners__logos-track {
+      display: flex;
+      align-items: center;
+      gap: 56px;
+      width: max-content;
+      padding-right: 56px; /* шов между копиями */
+      will-change: transform;
+      animation: rsc-logos-scroll 30s linear infinite;
+    }
+
+    .rsc-logos--scroll .rsc-partners__logos-track:hover {
+      animation-play-state: paused;
+    }
+
+    .rsc-logos--scroll .rsc-partners__logos-copy {
+      display: contents;
+    }
   }
 
-  .rsc-logos--scroll .rsc-partners__logos-track {
-    animation: rsc-logos-scroll 30s linear infinite;
-  }
-
-  /* На мобильном лента включается при >4 логотипах */
+  /* Мобильная бегущая строка — при >2 логотипов */
   @media (max-width: 640px) {
-    .rsc-logos--scroll-mobile .rsc-partners__logos-track {
+    .rsc-partners__logos.rsc-logos--scroll-mobile {
+      display: block;
+      overflow: hidden;
+      flex-wrap: nowrap;
+      gap: 0;
+      -webkit-mask-image: linear-gradient(90deg, transparent, #000 12%, #000 88%, transparent);
+      mask-image: linear-gradient(90deg, transparent, #000 12%, #000 88%, transparent);
+    }
+
+    .rsc-partners__logos.rsc-logos--scroll-mobile .rsc-partners__logos-track {
+      display: flex;
+      align-items: center;
+      gap: 40px;
+      width: max-content;
+      padding-right: 40px; /* шов между копиями */
+      will-change: transform;
       animation: rsc-logos-scroll 22s linear infinite;
+    }
+
+    .rsc-partners__logos.rsc-logos--scroll-mobile .rsc-partners__logos-track:hover {
+      animation-play-state: paused;
+    }
+
+    .rsc-partners__logos.rsc-logos--scroll-mobile .rsc-partners__logos-copy {
+      display: contents;
     }
   }
 
@@ -925,7 +990,7 @@ const PARTNERS_CSS = `
 
   @media (max-width: 640px) {
     .rsc-partners {
-      padding: 80px 16px 90px;
+      padding: 80px 16px 80px;
     }
 
     .rsc-modal {

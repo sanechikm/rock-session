@@ -1,17 +1,18 @@
 // components/EventModal.tsx
-// Общая модалка события: обложка → название → дата/время → описание →
-// место → карта → исполнители → партнёры → галерея → кнопка покупки.
-// Используется в блоках «Афиши» и «Отыграли».
+// Модалка события: минимальный каркас — только открытие/закрытие.
+// Содержимое добавляем отдельными шагами.
 
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
+import LavaButton from './LavaButton';
 
 export type EventData = {
   id: number;
   title: string;
   description: string | null;
+  description_full?: string | null;
   day: string;
   month: string;
   time: string;
@@ -20,28 +21,86 @@ export type EventData = {
   price_to: number | null;
   ticket_url: string | null;
   image: string | null;
-  artists: { name: string; role?: string }[] | null;
-  event_partners: { name: string; role?: string }[] | null;
+  artists: { name: string; role?: string; photo?: string }[] | null;
+  event_partners: { name: string; role?: string; photo?: string }[] | null;
   is_past?: boolean;
 };
 
-type Photo = { id: number; src: string; alt: string | null };
+/* Горизонтальная лента: уходит вправо с затемнением, стрелки, ползунок скрыт */
+function Rail({
+  children,
+  ariaLabel,
+}: {
+  children: React.ReactNode;
+  ariaLabel?: string;
+}) {
+  const trackRef = useRef<HTMLDivElement>(null);
+  const [canLeft, setCanLeft] = useState(false);
+  const [canRight, setCanRight] = useState(true);
 
-/* Заглушки исполнителей */
-const PLACEHOLDER_ACTS = [
-  { name: 'Название группы', role: 'Хедлайнер' },
-  { name: 'Название группы', role: 'Специальный гость' },
-  { name: 'Название группы', role: 'Согревающий состав' },
-];
+  const check = useCallback(() => {
+    const el = trackRef.current;
+    if (!el) return;
+    setCanLeft(el.scrollLeft > 8);
+    setCanRight(el.scrollLeft + el.clientWidth < el.scrollWidth - 8);
+  }, []);
 
-/* Заглушки партнёров */
-const PLACEHOLDER_CREW = [
-  { name: 'Имя Фамилия', role: 'Фотограф' },
-  { name: 'Имя Фамилия', role: 'Видеограф' },
-  { name: 'Имя Фамилия', role: 'Ведущий' },
-];
+  useEffect(() => {
+    check();
+  }, [check, children]);
 
-const formatPrice = (n: number) => n.toLocaleString('ru-RU');
+  useEffect(() => {
+    window.addEventListener('resize', check);
+    return () => window.removeEventListener('resize', check);
+  }, [check]);
+
+  const scroll = (dir: 1 | -1) => {
+    const el = trackRef.current;
+    if (!el) return;
+    el.scrollBy({ left: el.clientWidth * 0.8 * dir, behavior: 'smooth' });
+  };
+
+  return (
+    <div className="rsc-pm__rail">
+      <div
+        className="rsc-pm__rail-track"
+        ref={trackRef}
+        onScroll={check}
+        role="region"
+        aria-label={ariaLabel}
+      >
+        {children}
+      </div>
+
+      {canRight && <div className="rsc-pm__rail-fade" aria-hidden="true" />}
+
+      {canLeft && (
+        <button
+          type="button"
+          className="rsc-pm__rail-arrow rsc-pm__rail-arrow--left"
+          onClick={() => scroll(-1)}
+          aria-label="Назад"
+        >
+          <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+            <path d="m15 18-6-6 6-6" />
+          </svg>
+        </button>
+      )}
+      {canRight && (
+        <button
+          type="button"
+          className="rsc-pm__rail-arrow rsc-pm__rail-arrow--right"
+          onClick={() => scroll(1)}
+          aria-label="Вперёд"
+        >
+          <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+            <path d="m9 18 6-6-6-6" />
+          </svg>
+        </button>
+      )}
+    </div>
+  );
+}
 
 export default function EventModal({
   poster,
@@ -50,21 +109,6 @@ export default function EventModal({
   poster: EventData;
   onClose: () => void;
 }) {
-  const [photos, setPhotos] = useState<Photo[]>([]);
-
-  /* Фото события из галереи (poster_id) */
-  useEffect(() => {
-    (async () => {
-      const { data } = await supabase
-        .from('gallery')
-        .select('id, src, alt')
-        .eq('poster_id', poster.id)
-        .eq('visible', true)
-        .order('sort_order', { ascending: true });
-      setPhotos(data || []);
-    })();
-  }, [poster.id]);
-
   /* Блокируем скролл + закрытие по Escape */
   useEffect(() => {
     document.body.style.overflow = 'hidden';
@@ -78,16 +122,24 @@ export default function EventModal({
     };
   }, [onClose]);
 
-  /* Реальные данные или заглушки */
-  const acts =
-    poster.artists && poster.artists.length > 0 ? poster.artists : PLACEHOLDER_ACTS;
+  const [photos, setPhotos] = useState<{ id: number; src: string; alt: string | null }[]>([]);
 
-  const crew =
-    poster.event_partners && poster.event_partners.length > 0
-      ? poster.event_partners
-      : PLACEHOLDER_CREW;
+  /* Фото события из галереи (привязаны к афише через poster_id) */
+  useEffect(() => {
+    (async () => {
+      const { data } = await supabase
+        .from('gallery')
+        .select('id, src, alt')
+        .eq('poster_id', poster.id)
+        .eq('visible', true)
+        .order('sort_order', { ascending: true });
+      setPhotos(data || []);
+    })();
+  }, [poster.id]);
 
-  const mapQuery = poster.venue || 'Ростов-на-Дону';
+  /* Блок появляется только если есть хотя бы одна запись с именем */
+  const acts = (poster.artists ?? []).filter((a) => a.name?.trim());
+  const crew = (poster.event_partners ?? []).filter((c) => c.name?.trim());
 
   return (
     <>
@@ -102,7 +154,7 @@ export default function EventModal({
           </svg>
         </button>
 
-        {/* 1. Обложка */}
+        {/* Обложка: на всю ширину, к верхнему краю */}
         <div className="rsc-pm__hero">
           {poster.image ? (
             <img src={poster.image} alt={poster.title} />
@@ -116,106 +168,77 @@ export default function EventModal({
         </div>
 
         <div className="rsc-pm__content">
-          {/* 2. Название */}
-          <h3 className="rsc-pm__title">{poster.title}</h3>
+          {/* Дата + название */}
+          <div className="rsc-pm__head">
+            <div className="rsc-pm__head-date">
+              <span className="rsc-pm__head-day">{poster.day}</span>
+              <span className="rsc-pm__head-myo">
+                {poster.month} · {poster.time}
+              </span>
+            </div>
+            <h3 className="rsc-pm__head-title">{poster.title}</h3>
+          </div>
 
-          {/* 3. Дата и время */}
-          <span className="rsc-pm__datetime">
-            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
-              <rect x="3" y="4" width="18" height="18" rx="2" />
-              <path d="M16 2v4M8 2v4M3 10h18" />
-            </svg>
-            {poster.day} {poster.month} · {poster.time}
-          </span>
-
-          {/* 4. Описание */}
-          <section className="rsc-pm__section">
-            <h4 className="rsc-pm__section-title">О концерте</h4>
-            {poster.description ? (
-              <p className="rsc-pm__description">{poster.description}</p>
-            ) : (
+          {/* О концерте */}
+          {(poster.description_full || poster.description) && (
+            <section className="rsc-pm__section">
+              <h4 className="rsc-pm__section-title">О концерте</h4>
               <p className="rsc-pm__description">
-                Описание концерта появится позже. Следите за анонсами —
-                мы расскажем о программе вечера, составе музыкантов
-                и особенностях площадки.
+                {poster.description_full || poster.description}
               </p>
-            )}
-          </section>
+            </section>
+          )}
 
-          {/* 5. Место */}
-          <section className="rsc-pm__section">
-            <h4 className="rsc-pm__section-title">Место проведения</h4>
-            <p className="rsc-pm__venue">
-              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                <path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 1 1 16 0z" />
-                <circle cx="12" cy="10" r="3" />
-              </svg>
-              {poster.venue || 'Место уточняется — следите за афишей'}
-            </p>
-
-            {/* 6. Карта */}
-            <iframe
-              className="rsc-pm__map"
-              src={`https://yandex.ru/map-widget/v1/?text=${encodeURIComponent(mapQuery)}`}
-              loading="lazy"
-              title="Карта места проведения"
-              allowFullScreen
-            />
-          </section>
-
-          {/* 7. Исполнители */}
-          <section className="rsc-pm__section">
-            <h4 className="rsc-pm__section-title">Исполнители</h4>
-            <div className="rsc-pm__acts">
-              {acts.map((act, i) => (
-                <div key={i} className="rsc-pm__act">
-                  <div
-                    className={
-                      'rsc-pm__act-avatar' +
-                      (poster.artists && poster.artists.length > 0 ? '' : ' rsc-pm__act-avatar--icon')
-                    }
-                    aria-hidden="true"
-                  >
-                    {poster.artists && poster.artists.length > 0 ? (
-                      act.name.trim().charAt(0).toUpperCase()
+          {/* Исполнители: строка карточек */}
+          {acts.length > 0 && (
+            <section className="rsc-pm__section">
+              <h4 className="rsc-pm__section-title">Исполнители</h4>
+              <Rail ariaLabel="Исполнители">
+                {acts.map((act, i) => (
+                  <figure key={i} className="rsc-pm__act">
+                    {act.photo ? (
+                      <img src={act.photo} alt={act.name} />
                     ) : (
-                      <svg viewBox="0 0 24 24" width="26" height="26" fill="currentColor">
-                        <path d="M12 3v10.55A4 4 0 1 0 14 17V7h4V3z" />
-                      </svg>
+                      <span className="rsc-pm__act-letter" aria-hidden="true">
+                        {act.name.trim().charAt(0).toUpperCase()}
+                      </span>
                     )}
-                  </div>
-                  <span className="rsc-pm__act-name">{act.name}</span>
-                  {act.role && <span className="rsc-pm__act-role">{act.role}</span>}
-                </div>
-              ))}
-            </div>
-          </section>
+                    <figcaption className="rsc-pm__act-name">{act.name}</figcaption>
+                  </figure>
+                ))}
+              </Rail>
+            </section>
+          )}
 
-          {/* 8. Партнёры */}
-          <section className="rsc-pm__section">
-            <h4 className="rsc-pm__section-title">Партнёры</h4>
-            <div className="rsc-pm__crew">
-              {crew.map((person, i) => (
-                <div key={i} className="rsc-pm__crew-card">
-                  <div className="rsc-pm__crew-avatar" aria-hidden="true">
-                    {person.name.trim().charAt(0).toUpperCase()}
-                  </div>
-                  <div className="rsc-pm__crew-info">
-                    <span className="rsc-pm__crew-name">{person.name}</span>
+          {/* Партнёры: строка карточек */}
+          {crew.length > 0 && (
+            <section className="rsc-pm__section">
+              <h4 className="rsc-pm__section-title">Партнёры</h4>
+              <Rail ariaLabel="Партнёры">
+                {crew.map((person, i) => (
+                  <figure key={i} className="rsc-pm__act">
+                    {person.photo ? (
+                      <img src={person.photo} alt={person.name} />
+                    ) : (
+                      <span className="rsc-pm__act-letter" aria-hidden="true">
+                        {person.name.trim().charAt(0).toUpperCase()}
+                      </span>
+                    )}
+                    <figcaption className="rsc-pm__act-name">{person.name}</figcaption>
                     {person.role && (
-                      <span className="rsc-pm__crew-role">{person.role}</span>
+                      <span className="rsc-pm__act-role">{person.role}</span>
                     )}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </section>
+                  </figure>
+                ))}
+              </Rail>
+            </section>
+          )}
 
-          {/* 9. Галерея */}
-          <section className="rsc-pm__section">
-            <h4 className="rsc-pm__section-title">Галерея</h4>
-            {photos.length > 0 ? (
-              <div className="rsc-pm__gallery">
+          {/* Галерея: лента фото */}
+          {photos.length > 0 && (
+            <section className="rsc-pm__section">
+              <h4 className="rsc-pm__section-title">Галерея</h4>
+              <Rail ariaLabel="Галерея события">
                 {photos.map((photo) => (
                   <a
                     key={photo.id}
@@ -231,32 +254,36 @@ export default function EventModal({
                     />
                   </a>
                 ))}
-              </div>
-            ) : (
-              <div className="rsc-pm__gallery">
-                {[1, 2, 3, 4, 5, 6].map((n) => (
-                  <div key={n} className="rsc-pm__gallery-ph" aria-hidden="true">
-                    <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden="true">
-                      <rect x="3" y="3" width="18" height="18" rx="2" />
-                      <circle cx="8.5" cy="8.5" r="1.5" />
-                      <path d="m21 15-4.5-4.5L6 21" />
-                    </svg>
-                  </div>
-                ))}
-              </div>
-            )}
-          </section>
+              </Rail>
+            </section>
+          )}
 
-          {/* Купить билет (только для будущих событий) */}
+          {/* Место проведения */}
+          {poster.venue && (
+            <section className="rsc-pm__section">
+              <h4 className="rsc-pm__section-title">Место проведения</h4>
+              <p className="rsc-pm__venue">
+                <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                  <path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 1 1 16 0z" />
+                  <circle cx="12" cy="10" r="3" />
+                </svg>
+                {poster.venue}
+              </p>
+              <iframe
+                className="rsc-pm__map"
+                src={`https://yandex.ru/map-widget/v1/?text=${encodeURIComponent(poster.venue)}`}
+                loading="lazy"
+                title="Карта места проведения"
+                allowFullScreen
+              />
+            </section>
+          )}
+
+          {/* Купить билет — по центру (виджет Lava) */}
           {poster.ticket_url && !poster.is_past && (
-            <a
-              href={poster.ticket_url}
-              className="rsc-pm__ticket"
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              Купить билет
-            </a>
+            <div className="rsc-pm__ticket-wrap">
+              <LavaButton ticketUrl={poster.ticket_url} className="rsc-pm__ticket" />
+            </div>
           )}
           {poster.is_past && (
             <p className="rsc-pm__past-note">Событие прошло</p>
@@ -296,6 +323,14 @@ const MODAL_CSS = `
     border-radius: 14px;
     transform: translate(-50%, -50%);
     animation: rsc-pm-in 0.3s ease;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+
+  .rsc-pm::-webkit-scrollbar {
+    display: none;
+    width: 0;
+    height: 0;
   }
 
   @keyframes rsc-pm-in {
@@ -327,10 +362,11 @@ const MODAL_CSS = `
     border-color: var(--accent, #00c3d0);
   }
 
+  /* Обложка: во всю ширину окна, к верхнему краю (под крестик) */
   .rsc-pm__hero {
     position: relative;
-    aspect-ratio: 16 / 7;
     margin-top: -50px;
+    aspect-ratio: 16 / 7;
     overflow: hidden;
     border-radius: 14px 14px 0 0;
     background: linear-gradient(135deg, #1a1a1a 0%, #060606 100%);
@@ -356,30 +392,51 @@ const MODAL_CSS = `
 
   .rsc-pm__content {
     padding: 0 32px 32px;
-  }
-
-  .rsc-pm__title {
-    margin: 20px 0 14px;
-    font-family: var(--font-tablon), 'Arial', sans-serif;
-    font-size: clamp(28px, 4vw, 44px);
-    line-height: 1.05;
-    font-weight: 400;
-    text-transform: uppercase;
+    font-family: 'Poppins', sans-serif;
+    font-size: 16px;
     color: #ffffff;
   }
 
-  .rsc-pm__datetime {
-    display: inline-flex;
+  /* Дата + название */
+  .rsc-pm__head {
+    display: flex;
     align-items: center;
-    gap: 10px;
-    margin-bottom: 24px;
-    padding: 10px 18px;
+    gap: 24px;
+    flex-wrap: nowrap; /* дата слева, название справа — в одну строку */
+    margin-top: 24px;
+  }
+
+  .rsc-pm__head-date {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+    flex-shrink: 0;
+  }
+
+  .rsc-pm__head-day {
+    font-family: var(--font-tablon), 'Arial', sans-serif;
+    font-size: clamp(38px, 5vw, 56px);
+    line-height: 1;
+    color: var(--accent, #00c3d0);
+  }
+
+  .rsc-pm__head-myo {
     font-family: 'Poppins', sans-serif;
-    font-size: 15px;
+    font-size: 14px;
+    color: #ffffff;
+  }
+
+  .rsc-pm__head-title {
+    flex: 1 1 auto;
+    min-width: 0; /* название занимает всё место справа и переносится в 2 строки */
+    margin: 0;
+    font-family: var(--font-tablon), 'Arial', sans-serif;
+    font-size: clamp(22px, 2.6vw, 34px);
+    line-height: 1.1;
     font-weight: 600;
-    color: #060606;
-    background: var(--accent, #00c3d0);
-    border-radius: 8px;
+    text-transform: uppercase;
+    color: #ffffff;
   }
 
   .rsc-pm__section {
@@ -390,7 +447,7 @@ const MODAL_CSS = `
     margin: 0 0 16px;
     font-family: var(--font-tablon), 'Arial', sans-serif;
     font-size: 20px;
-    font-weight: 400;
+    font-weight: 600;
     text-transform: uppercase;
     color: var(--accent, #00c3d0);
   }
@@ -399,19 +456,86 @@ const MODAL_CSS = `
     margin: 0;
     font-family: 'Poppins', sans-serif;
     font-size: 15px;
-    font-weight: 300;
-    line-height: 1.75;
-    color: #8e8e93;
+    font-weight: 400;
+    line-height: 1.8;
+    color: #e9e9ec;
     white-space: pre-wrap;
   }
 
+  /* Исполнители: строка карточек */
+  .rsc-pm__acts {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px;
+  }
+
+  /* Карточка: квадратное фото + имя под ним. Всё. */
+  .rsc-pm__act {
+    width: 170px;
+    margin: 0;
+    padding: 0;
+    border: none;
+    outline: none;
+    background: #0d0d0d;
+  }
+
+  .rsc-pm__act img {
+    display: block;
+    width: 170px;
+    height: 170px;
+    margin: 0;
+    padding: 0;
+    border: none;
+    outline: none;
+    object-fit: cover;
+  }
+
+  .rsc-pm__act-letter {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    aspect-ratio: 1;
+    font-family: var(--font-tablon), sans-serif;
+    font-size: 64px;
+    line-height: 1;
+    color: color-mix(in srgb, var(--accent, #00c3d0) 35%, transparent);
+    text-transform: uppercase;
+    background: linear-gradient(150deg, #1e1e1e 0%, #0b0b0b 100%);
+  }
+
+  .rsc-pm__act-name {
+    display: block;
+    padding: 12px 8px;
+    text-align: center;
+    font-family: 'Poppins', sans-serif;
+    font-size: 14px;
+    font-weight: 600;
+    color: #ffffff;
+    background: #0d0d0d;
+  }
+
+  /* Роль — под именем, акцентом (у карточек партнёров) */
+  .rsc-pm__act-role {
+    display: block;
+    padding: 0 8px 12px;
+    text-align: center;
+    font-family: 'Poppins', sans-serif;
+    font-size: 12px;
+    color: var(--accent, #00c3d0);
+    font-weight: 500;
+    background: #0d0d0d;
+  }
+
+  /* Место проведения */
   .rsc-pm__venue {
     display: flex;
     align-items: center;
     gap: 10px;
+    margin: 0 0 16px;
     font-family: 'Poppins', sans-serif;
-    font-size: 15px;
-    font-weight: 500;
+    font-size: 16px;
+    font-weight: 600;
     color: #ffffff;
   }
 
@@ -421,165 +545,34 @@ const MODAL_CSS = `
   }
 
   .rsc-pm__map {
-    margin-top: 14px;
+    display: block;
     width: 100%;
-    aspect-ratio: 16 / 8;
+    aspect-ratio: 16 / 9;
     border: none;
-    border-radius: 10px;
     background: #0c0c0c;
     filter: grayscale(1) invert(0.92) contrast(0.9);
   }
 
-  .rsc-pm__acts {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
-    gap: 12px;
-  }
-
-  .rsc-pm__act {
-    position: relative;
-    aspect-ratio: 4 / 3;
-    border-radius: 10px;
-    overflow: hidden;
-    background: linear-gradient(150deg, #1e1e1e 0%, #0c0c0c 100%);
-    border: 1px solid rgba(255, 255, 255, 0.08);
+  /* Купить билет — по центру снизу */
+  .rsc-pm__ticket-wrap {
     display: flex;
-    flex-direction: column;
-    align-items: center;
     justify-content: center;
-    gap: 8px;
-    padding: 16px;
-    text-align: center;
-  }
-
-  .rsc-pm__act-avatar {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 56px;
-    height: 56px;
-    font-family: var(--font-tablon), sans-serif;
-    font-size: 24px;
-    color: #060606;
-    background: var(--accent, #00c3d0);
-    border-radius: 50%;
-  }
-
-  .rsc-pm__act-avatar--icon {
-    color: rgba(255, 255, 255, 0.15);
-    background: rgba(255, 255, 255, 0.06);
-  }
-
-  .rsc-pm__act-name {
-    font-family: 'Poppins', sans-serif;
-    font-size: 15px;
-    font-weight: 600;
-    color: #ffffff;
-  }
-
-  .rsc-pm__act-role {
-    font-family: 'Poppins', sans-serif;
-    font-size: 12px;
-    color: #8e8e93;
-  }
-
-  .rsc-pm__crew {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
-    gap: 12px;
-  }
-
-  .rsc-pm__crew-card {
-    display: flex;
-    align-items: center;
-    gap: 14px;
-    padding: 16px;
-    background: #0c0c0c;
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    border-radius: 10px;
-  }
-
-  .rsc-pm__crew-avatar {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 44px;
-    height: 44px;
-    flex-shrink: 0;
-    font-family: var(--font-tablon), sans-serif;
-    font-size: 18px;
-    color: #060606;
-    background: rgba(255, 255, 255, 0.85);
-    border-radius: 50%;
-  }
-
-  .rsc-pm__crew-info {
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
-    min-width: 0;
-  }
-
-  .rsc-pm__crew-name {
-    font-family: 'Poppins', sans-serif;
-    font-size: 14px;
-    font-weight: 600;
-    color: #ffffff;
-  }
-
-  .rsc-pm__crew-role {
-    font-family: 'Poppins', sans-serif;
-    font-size: 12px;
-    color: #8e8e93;
-  }
-
-  .rsc-pm__gallery {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 10px;
-  }
-
-  .rsc-pm__gallery-item {
-    display: block;
-    border-radius: 8px;
-    overflow: hidden;
-  }
-
-  .rsc-pm__gallery-item img {
-    display: block;
-    width: 100%;
-    aspect-ratio: 1;
-    object-fit: cover;
-    transition: transform 0.3s ease;
-  }
-
-  .rsc-pm__gallery-item:hover img { transform: scale(1.05); }
-
-  .rsc-pm__gallery-ph {
-    position: relative;
-    aspect-ratio: 1;
-    border-radius: 8px;
-    background: linear-gradient(150deg, #1e1e1e 0%, #0c0c0c 100%);
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: rgba(255, 255, 255, 0.1);
+    margin-top: 32px;
   }
 
   .rsc-pm__ticket {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    margin-top: 32px;
-    min-width: 220px;
+    cursor: pointer;
+    border-radius: 0;
+    min-width: 240px;
     padding: 15px 32px;
     font-family: 'Poppins', sans-serif;
     font-size: 16px;
-    font-weight: 500;
-    text-decoration: none;
-    background: var(--accent, #00c3d0);
+    font-weight: 600;
     color: #060606;
+    background: var(--accent, #00c3d0);
     border: 2px solid var(--accent, #00c3d0);
     transition: background 0.25s ease, color 0.25s ease;
   }
@@ -591,6 +584,7 @@ const MODAL_CSS = `
 
   .rsc-pm__past-note {
     margin: 32px 0 0;
+    text-align: center;
     font-family: 'Poppins', sans-serif;
     font-size: 15px;
     color: #8e8e93;
@@ -598,9 +592,86 @@ const MODAL_CSS = `
     padding-top: 20px;
   }
 
-  @media (max-width: 640px) {
-    .rsc-pm__content { padding: 0 20px 24px; }
-    .rsc-pm__gallery { grid-template-columns: repeat(2, 1fr); }
-    .rsc-pm__acts, .rsc-pm__crew { grid-template-columns: 1fr 1fr; }
+  /* Галерея: фото лентой */
+  .rsc-pm__gallery-item {
+    flex-shrink: 0;
+    display: block;
+    overflow: hidden;
   }
+
+  .rsc-pm__gallery-item img {
+    display: block;
+    height: 180px;
+    width: auto;
+    aspect-ratio: 4 / 3;
+    object-fit: cover;
+    transition: transform 0.3s ease;
+  }
+
+  .rsc-pm__gallery-item:hover img {
+    transform: scale(1.05);
+  }
+
+  /* Лента: трек уходит вправо, затемнение на краю */
+  .rsc-pm__rail {
+    position: relative;
+  }
+
+  .rsc-pm__rail-track {
+    display: flex;
+    gap: 16px;
+    overflow-x: auto;
+    padding-bottom: 6px;
+    scroll-behavior: smooth;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+
+  .rsc-pm__rail-track::-webkit-scrollbar {
+    display: none;
+    width: 0;
+    height: 0;
+  }
+
+  .rsc-pm__rail-track .rsc-pm__act {
+    flex-shrink: 0;
+  }
+
+  .rsc-pm__rail-fade {
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 6px;
+    width: 90px;
+    pointer-events: none;
+    background: linear-gradient(to right, rgba(20, 20, 20, 0) 0%, #141414 100%);
+  }
+
+  .rsc-pm__rail-arrow {
+    position: absolute;
+    top: 50%;
+    z-index: 2;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 38px;
+    height: 38px;
+    padding: 0;
+    color: #ffffff;
+    background: rgba(12, 12, 12, 0.85);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 50%;
+    cursor: pointer;
+    transform: translateY(-50%);
+    transition: color 0.2s ease, border-color 0.2s ease;
+  }
+
+  .rsc-pm__rail-arrow:hover {
+    color: var(--accent, #00c3d0);
+    border-color: var(--accent, #00c3d0);
+  }
+
+  .rsc-pm__rail-arrow--left  { left: 8px; }
+  .rsc-pm__rail-arrow--right { right: 8px; }
+
 `;

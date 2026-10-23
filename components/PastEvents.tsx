@@ -1,23 +1,58 @@
 // components/PastEvents.tsx
-// Блок «Отыграли» — архив прошедших концертов. Данные из Supabase.
-// Пагинация по 3 + затемнение + «Посмотреть еще».
+// Блок «Отыграли» — архив прошедших концертов.
+// Карточка-чек с пунктирными разделителями: десктоп — горизонтальная
+// лента со стрелками, мобильный — вертикальный стек на всю ширину.
 // «Подробнее» открывает ту же модалку события, что и в «Афишах».
 
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
 import EventModal, { type EventData } from './EventModal';
-import TicketFrame from './TicketFrame';
-import Barcode from './Barcode';
 
-const VISIBLE_COUNT = 3;
+/* Формат суммы: 6400 → «6 400» */
+const formatPrice = (value: number | null | undefined) =>
+  value ? Number(value).toLocaleString('ru-RU') : null;
 
 export default function PastEvents() {
   const [events, setEvents] = useState<EventData[]>([]);
-  const [visibleCount, setVisibleCount] = useState(VISIBLE_COUNT);
   const [loading, setLoading] = useState(true);
   const [openId, setOpenId] = useState<number | null>(null);
+
+  /* Лента: скролл, стрелки, затемнение */
+  const trackRef = useRef<HTMLDivElement>(null);
+  const [canLeft, setCanLeft] = useState(false);
+  const [canRight, setCanRight] = useState(true);
+
+  const checkScroll = useCallback(() => {
+    const el = trackRef.current;
+    if (!el) return;
+    setCanLeft(el.scrollLeft > 8);
+    setCanRight(el.scrollLeft + el.clientWidth < el.scrollWidth - 8);
+  }, []);
+
+  useEffect(() => {
+    checkScroll();
+  }, [checkScroll, events]);
+
+  useEffect(() => {
+    window.addEventListener('resize', checkScroll);
+    return () => window.removeEventListener('resize', checkScroll);
+  }, [checkScroll]);
+
+  const scrollBy = (dir: 1 | -1) => {
+    const el = trackRef.current;
+    if (!el) return;
+    // Мобильный: ровно на один билет (ширина карточки + отступ ленты).
+    // Десктоп: как раньше — шаг 0.7 экрана.
+    const card = el.querySelector('.rsc-past-t') as HTMLElement | null;
+    const gap = parseFloat(getComputedStyle(el).gap) || 0;
+    const step =
+      window.innerWidth <= 760 && card
+        ? card.getBoundingClientRect().width + gap
+        : el.clientWidth * 0.7;
+    el.scrollBy({ left: step * dir, behavior: 'smooth' });
+  };
 
   useEffect(() => {
     (async () => {
@@ -32,13 +67,8 @@ export default function PastEvents() {
     })();
   }, []);
 
-  const hasMore = visibleCount < events.length;
   const openPoster = events.find((e) => e.id === openId) || null;
   const close = useCallback(() => setOpenId(null), []);
-
-  const showMore = () => {
-    setVisibleCount((c) => Math.min(c + VISIBLE_COUNT, events.length));
-  };
 
   if (loading || events.length === 0) return null;
 
@@ -51,59 +81,120 @@ export default function PastEvents() {
           <h2 className="rsc-past__heading">Отыграли</h2>
           <p className="rsc-past__subheading">История концертов</p>
 
-          <div className="rsc-past__list-wrap">
-            <div className="rsc-past__list">
-              {events.slice(0, visibleCount).map((event) => (
-                <article key={event.id} className="rsc-past-ticket">
-                  <TicketFrame />
-                  <div className="rsc-past-ticket__inner">
-                  <div className="rsc-past-ticket__date">
-                    <span className="rsc-past-ticket__day">{event.day}</span>
-                    <span className="rsc-past-ticket__month">
-                      {event.month} · {event.time}
-                    </span>
-                  </div>
+          <div className="rsc-past__rail">
+            <div
+              className="rsc-past__track"
+              ref={trackRef}
+              onScroll={checkScroll}
+              role="region"
+              aria-label="Прошедшие концерты"
+            >
+              {events.map((event) => {
+                const price = formatPrice(event.price_from);
+                return (
+                  <article key={event.id} className="rsc-past-t">
+                    {/* Название */}
+                    <h3 className="rsc-past-t__title">{event.title}</h3>
 
-                  <div className="rsc-past-ticket__body">
-                    <h3 className="rsc-past-ticket__title">{event.title}</h3>
-                    {event.description && (
-                      <p className="rsc-past-ticket__description">{event.description}</p>
-                    )}
-                    {event.venue && (
-                      <p className="rsc-past-ticket__venue">{event.venue}</p>
-                    )}
+                    <div className="rsc-past-t__divider" aria-hidden="true" />
 
-                    <div className="rsc-past-ticket__footer">
-                      <span className="rsc-past-ticket__status">Прошло</span>
-                      <div className="rsc-past-ticket__actions">
-                        <button
-                          className="rsc-past-ticket__btn"
-                          onClick={() => setOpenId(event.id)}
-                        >
-                          Подробнее
-                        </button>
+                    {/* Основные данные */}
+                    <div className="rsc-past-t__rows">
+                      <div className="rsc-past-t__row">
+                        <span className="rsc-past-t__label">Статус:</span>
+                        <span className="rsc-past-t__value rsc-past-t__value--accent">
+                          Закончился
+                        </span>
                       </div>
+                      <div className="rsc-past-t__row">
+                        <span className="rsc-past-t__label">Дата:</span>
+                        <span className="rsc-past-t__value">
+                          {event.day} {event.month}
+                        </span>
+                      </div>
+                      <div className="rsc-past-t__row">
+                        <span className="rsc-past-t__label">Время:</span>
+                        <span className="rsc-past-t__value">{event.time}</span>
+                      </div>
+                      {event.venue && (
+                        <div className="rsc-past-t__row">
+                          <span className="rsc-past-t__label">Место:</span>
+                          <span className="rsc-past-t__value">{event.venue}</span>
+                        </div>
+                      )}
                     </div>
-                  </div>
 
-                  <div className="rsc-past-ticket__qr" aria-hidden="true">
-                    <Barcode />
-                  </div>
-                  </div>
-                </article>
-              ))}
+                    {/* Описание: блок всегда занимает максимум места,
+                        даже если текст пустой */}
+                    <div className="rsc-past-t__desc">
+                      <div className="rsc-past-t__divider" aria-hidden="true" />
+                      {event.description && (
+                        <div className="rsc-past-t__row rsc-past-t__row--top">
+                          <span className="rsc-past-t__label">Описание:</span>
+                          <span className="rsc-past-t__value rsc-past-t__value--dim rsc-past-t__value--clamp">
+                            {event.description}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Сумма */}
+                    {price && (
+                      <>
+                        <div className="rsc-past-t__divider" aria-hidden="true" />
+                        <div className="rsc-past-t__row">
+                          <span className="rsc-past-t__label">Сумма:</span>
+                          <span className="rsc-past-t__value rsc-past-t__value--big">
+                            от {price} ₽
+                          </span>
+                        </div>
+                      </>
+                    )}
+
+                    <div className="rsc-past-t__divider" aria-hidden="true" />
+
+                    {/* Кнопка */}
+                    <button
+                      type="button"
+                      className="rsc-past-t__btn"
+                      onClick={() => setOpenId(event.id)}
+                    >
+                      Подробнее
+                    </button>
+                  </article>
+                );
+              })}
             </div>
 
-            {hasMore && <div className="rsc-past__fade" aria-hidden="true" />}
-          </div>
+            {/* Затемнение уходящей вправо ленты (десктоп) */}
+            {canRight && <div className="rsc-past__fade" aria-hidden="true" />}
 
-          {hasMore && (
-            <div className="rsc-past__more">
-              <button className="rsc-past__more-btn" onClick={showMore}>
-                Посмотреть еще
+            {/* Стрелки (десктоп) */}
+            {canLeft && (
+              <button
+                type="button"
+                className="rsc-past__arrow rsc-past__arrow--left"
+                onClick={() => scrollBy(-1)}
+                aria-label="Назад"
+              >
+                <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                  <path d="m15 18-6-6 6-6" />
+                </svg>
               </button>
-            </div>
-          )}
+            )}
+            {canRight && (
+              <button
+                type="button"
+                className="rsc-past__arrow rsc-past__arrow--right"
+                onClick={() => scrollBy(1)}
+                aria-label="Вперёд"
+              >
+                <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                  <path d="m9 18 6-6-6-6" />
+                </svg>
+              </button>
+            )}
+          </div>
         </div>
       </section>
 
@@ -116,7 +207,7 @@ export default function PastEvents() {
 const PAST_CSS = `
   .rsc-past {
     background: #060606;
-    padding: 40px 24px 120px;
+    padding: 120px 24px 120px;
     overflow-x: clip;
   }
 
@@ -137,7 +228,7 @@ const PAST_CSS = `
   }
 
   .rsc-past__subheading {
-    margin: 0 0 64px;
+    margin: 0 0 56px;
     text-align: center;
     font-family: var(--font-bicubik), 'Poppins', sans-serif;
     font-size: clamp(17px, 2.2vw, 24px);
@@ -146,271 +237,249 @@ const PAST_CSS = `
     color: var(--accent, #00c3d0);
   }
 
-  .rsc-past__list-wrap {
+  /* ---------- Лента ---------- */
+  .rsc-past__rail {
     position: relative;
   }
 
-  .rsc-past__list {
+  .rsc-past__track {
     display: flex;
-    flex-direction: column;
-    gap: 24px;
+    gap: 32px;
+    overflow-x: auto;
+    padding-bottom: 8px;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+    scroll-behavior: smooth;
   }
 
-  .rsc-past-ticket {
-    position: relative;
-    display: flex;
-    align-items: stretch;
-    transition: transform 0.35s cubic-bezier(0.22, 0.8, 0.3, 1);
+  .rsc-past__track::-webkit-scrollbar {
+    display: none;
+    width: 0;
+    height: 0;
   }
 
-  /* При наведении весь билет чуть едет вправо (только десктоп) */
-  @media (hover: hover) {
-    .rsc-past-ticket:hover {
-      transform: translateX(8px);
-    }
-  }
-
-  .rsc-ticket-frame {
+  .rsc-past__fade {
     position: absolute;
-    inset: 0;
-    width: 100%;
-    height: 100%;
+    top: 0;
+    right: 0;
+    bottom: 8px;
+    width: 110px;
+    pointer-events: none;
+    background: linear-gradient(to right, rgba(6, 6, 6, 0) 0%, #060606 100%);
   }
 
-  .rsc-past-ticket__inner {
-    position: relative;
-    z-index: 1;
+  .rsc-past__arrow {
+    position: absolute;
+    top: 50%;
+    z-index: 2;
     display: flex;
-    align-items: stretch;
-    width: 100%;
-  }
-
-  .rsc-past-ticket__date {
-    flex-shrink: 0;
-    width: 160px;
-    display: flex;
-    flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 6px;
-    padding: 32px 16px;
-  }
-
-  .rsc-past-ticket__day {
-    font-family: var(--font-tablon), 'Arial', sans-serif;
-    font-size: 54px;
-    line-height: 1;
-    color: var(--accent, #00c3d0);
-  }
-
-  .rsc-past-ticket__month {
-    font-family: 'Poppins', sans-serif;
-    font-size: 15px;
+    width: 44px;
+    height: 44px;
+    padding: 0;
     color: #ffffff;
+    background: rgba(12, 12, 12, 0.85);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 50%;
+    cursor: pointer;
+    transform: translateY(-50%);
+    transition: color 0.2s ease, border-color 0.2s ease;
   }
 
-  .rsc-past-ticket__body {
-    flex: 1;
-    padding: 32px 40px 32px 36px;
-    min-width: 0;
+  .rsc-past__arrow:hover {
+    color: var(--accent, #00c3d0);
+    border-color: var(--accent, #00c3d0);
   }
 
-  .rsc-past-ticket__title {
-    margin: 0 0 12px;
+  .rsc-past__arrow--left  { left: 10px; }
+  .rsc-past__arrow--right { right: 10px; }
+
+  /* ---------- Карточка-чек ---------- */
+  .rsc-past-t {
+    flex-shrink: 0;
+    scroll-snap-align: center;
+    display: flex;
+    flex-direction: column;
+    width: min(460px, 84vw);
+    min-height: 430px;
+    padding: 30px 34px 18px; /* снизу минимум — без отступа после кнопки */
+    background: #0a0a0a;
+    border: 1px solid rgba(255, 255, 255, 0.45);
+  }
+
+  .rsc-past-t__title {
+    margin: 0;
+    text-align: center;
     font-family: var(--font-tablon), 'Arial', sans-serif;
-    font-size: clamp(24px, 3vw, 36px);
+    font-size: clamp(24px, 2.4vw, 30px);
     line-height: 1.1;
     font-weight: 600;
     text-transform: uppercase;
     color: var(--accent, #00c3d0);
   }
 
-  .rsc-past-ticket__description {
-    margin: 0 0 12px;
-    max-width: 620px;
-    font-family: 'Poppins', sans-serif;
-    font-size: 15px;
-    font-weight: 300;
-    line-height: 1.6;
-    color: #8e8e93;
+  /* Пунктирные разделители: крупные штрихи с большим интервалом */
+  .rsc-past-t__divider {
+    height: 2px;
+    margin: 20px 0;
+    border: none;
+    background-image: linear-gradient(
+      to right,
+      rgba(255, 255, 255, 0.35) 50%,
+      transparent 50%
+    );
+    background-size: 26px 2px;
+    background-repeat: repeat-x;
   }
 
-  .rsc-past-ticket__venue {
-    margin: 0 0 24px;
+  /* Описание забирает всё свободное место карточки */
+  .rsc-past-t__desc {
+    flex: 1 1 auto;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .rsc-past-t__desc .rsc-past-t__divider {
+    margin-top: 20px;
+    margin-bottom: 20px;
+  }
+
+  .rsc-past-t__rows {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+
+  .rsc-past-t__row {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 28px;
+  }
+
+  .rsc-past-t__row--top {
+    align-items: flex-start;
+  }
+
+  .rsc-past-t__label {
+    flex-shrink: 0;
     font-family: 'Poppins', sans-serif;
-    font-size: 16px;
-    font-weight: 500;
+    font-size: clamp(15px, 1.3vw, 18px);
+    font-weight: 600;
     color: #ffffff;
   }
 
-  .rsc-past-ticket__footer {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 24px;
-    flex-wrap: wrap;
+  .rsc-past-t__value {
+    text-align: right;
+    font-family: 'Poppins', sans-serif;
+    font-size: clamp(15px, 1.3vw, 18px);
+    font-weight: 500;
+    color: #ffffff;
+    min-width: 0;
   }
 
-  .rsc-past-ticket__status {
-    font-family: 'Poppins', sans-serif;
-    font-size: 24px;
-    font-weight: 600;
+  .rsc-past-t__value--accent {
     color: var(--accent, #00c3d0);
   }
 
-  .rsc-past-ticket__actions {
-    display: flex;
-    gap: 16px;
-    flex-wrap: wrap;
+  .rsc-past-t__value--dim {
+    color: rgba(255, 255, 255, 0.38);
   }
 
-  .rsc-past-ticket__btn {
-    display: inline-flex;
+  .rsc-past-t__value--clamp {
+    display: -webkit-box;
+    -webkit-line-clamp: 4;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  .rsc-past-t__value--big {
+    font-size: clamp(20px, 1.8vw, 26px);
+    font-weight: 700;
+  }
+
+  .rsc-past-t__btn {
+    display: flex;
     align-items: center;
     justify-content: center;
-    min-width: 180px;
+    width: 100%;
     padding: 14px 28px;
     font-family: 'Poppins', sans-serif;
-    font-size: 15px;
-    font-weight: 500;
-    border: 2px solid var(--accent, #00c3d0);
-    background: transparent;
-    color: var(--accent, #00c3d0);
-    cursor: pointer;
-    transition: background 0.25s ease, color 0.25s ease, transform 0.2s ease;
-  }
-
-  .rsc-past-ticket__btn:hover {
+    font-size: clamp(15px, 1.3vw, 18px);
+    font-weight: 600;
     background: var(--accent, #00c3d0);
     color: #060606;
-    transform: translateY(-2px);
-  }
-
-  .rsc-past-ticket__btn:active {
-    transform: translateY(0);
-  }
-
-  .rsc-past-ticket__qr {
-    position: relative;
-    flex-shrink: 0;
-    width: 150px;
-    display: flex;
-    padding: 20px 20px 20px 26px;
-    align-items: stretch;
-  }
-
-  /* Перфорация: на десктопе её рисует SVG-рамка; точки — только мобильная */
-  .rsc-past-ticket__qr::before {
-    content: none;
-    position: absolute;
-    top: 12px;
-    bottom: 12px;
-    left: 7px;
-    width: 12px;
-    background-image: radial-gradient(circle 2.2px, rgba(255, 255, 255, 0.9) 97%, transparent 100%);
-    background-size: 12px 22px;
-    background-position: center 0;
-    background-repeat: repeat-y;
-  }
-
-
-
-
-  .rsc-past__fade {
-    position: absolute;
-    left: 0; right: 0; bottom: 0;
-    height: 55%;
-    min-height: 160px;
-    background: linear-gradient(
-      to bottom,
-      rgba(6, 6, 6, 0) 0%,
-      rgba(6, 6, 6, 0.55) 45%,
-      #060606 100%
-    );
-    pointer-events: none;
-  }
-
-  .rsc-past__more {
-    position: relative;
-    margin-top: -70px;
-    text-align: center;
-    z-index: 1;
-  }
-
-  .rsc-past__more-btn {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    min-width: 260px;
-    padding: 16px 32px;
-    font-family: 'Poppins', sans-serif;
-    font-size: 16px;
-    font-weight: 500;
-    background: var(--accent, #00c3d0);
-    color: #060606;
-    border: 2px solid var(--accent, #00c3d0);
+    border: none;
     cursor: pointer;
-    transition: background 0.25s ease, color 0.25s ease, transform 0.2s ease;
+    transition: filter 0.25s ease;
   }
 
-  .rsc-past__more-btn:hover {
-    background: transparent;
-    color: var(--accent, #00c3d0);
-    transform: translateY(-2px);
+  .rsc-past-t__btn:hover {
+    filter: brightness(1.1);
   }
 
+  /* ---------- Мобильный: та же горизонтальная лента, карточки меньше ---------- */
   @media (max-width: 760px) {
     .rsc-past {
-      padding: 20px 16px 90px;
+      padding: 80px 16px 80px;
     }
 
-    .rsc-past-ticket {
-      flex-direction: column;
-      background-image:
-        radial-gradient(circle 5.5px, #060606 97%, transparent 100%),
-        radial-gradient(circle 5.5px, #060606 97%, transparent 100%);
-      background-color: #141414;
-      background-size: 26px 11px, 26px 11px;
-      background-position: 13px -5.5px, 13px calc(100% + 5.5px);
-      background-repeat: repeat-x, repeat-x;
+    .rsc-past__subheading {
+      margin-bottom: 36px;
     }
 
-    .rsc-ticket-frame {
-      display: none;
+    .rsc-past__track {
+      gap: 18px;
+      padding-left: calc(50% - min(310px, 76vw) / 2);
+      padding-right: calc(50% - min(310px, 76vw) / 2);
+      scroll-snap-type: x mandatory;
     }
 
-    .rsc-past-ticket__inner {
-      flex-direction: column;
+    .rsc-past__fade {
+      width: 56px;
     }
 
-    .rsc-past-ticket__date {
-      width: 100%;
-      flex-direction: row;
-      gap: 12px;
-      padding: 22px 24px 14px;
+    .rsc-past__arrow {
+      width: 36px;
+      height: 36px;
     }
 
-    .rsc-past-ticket__day { font-size: 38px; }
-
-    .rsc-past-ticket__body { padding: 18px 24px 24px; }
-
-    .rsc-past-ticket__footer {
-      flex-direction: column;
-      align-items: stretch;
+    .rsc-past-t {
+      width: min(310px, 76vw);
+      min-height: 400px;
+      padding: 22px 20px 14px;
     }
 
-    .rsc-past-ticket__btn { width: 100%; min-width: 0; }
-
-    /* В мобильной версии корешка со штрихкодом нет */
-    .rsc-past-ticket__qr {
-      display: none;
+    .rsc-past-t__divider {
+      height: 1px;
+      margin: 16px 0;
+      background-size: 20px 1px;
     }
 
-    /* При нажатии на билет он чуть приподнимается вверх */
-    .rsc-past-ticket:active {
-      transform: translateY(-4px);
+    .rsc-past-t__rows {
+      gap: 10px;
     }
 
-    .rsc-past__fade { height: 40%; }
+    .rsc-past-t__row {
+      gap: 14px;
+    }
+
+    .rsc-past-t__label {
+      font-size: 15px;
+    }
+
+    .rsc-past-t__value {
+      font-size: 15px;
+    }
+
+    .rsc-past-t__value--big {
+      font-size: 20px;
+    }
+
+    .rsc-past-t__btn {
+      padding: 12px 20px;
+      font-size: 15px;
+    }
   }
 `;

@@ -9,6 +9,7 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/lib/supabase';
+import { compressImage } from '@/lib/image';
 
 const BUCKET = 'gallery';
 
@@ -155,7 +156,7 @@ export default function AdminGalleryPage() {
 
     // Загружаем по очереди: так видно прогресс и не упираемся в лимиты Storage
     for (let i = 0; i < files.length; i++) {
-      const file = files[i];
+      const file = await compressImage(files[i]);
       setUploadProgress({ current: i + 1, total: files.length });
 
       const ext = file.name.split('.').pop();

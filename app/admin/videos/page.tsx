@@ -1,14 +1,17 @@
 // app/admin/videos/page.tsx
 // Вкладка «Видео»: список с превью (16:9), названием и датой.
-// Добавление через модалку (превью — загрузка картинки или URL),
-// удаление, видимость, drag & drop. Таблица videos, превью — в Storage (bucket 'gallery').
+// Добавление через модалку: загружаем сам видеофайл в Storage (bucket 'videos')
+// + обложку-превью (bucket 'gallery'). Удаление, видимость, drag & drop.
 
 'use client';
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/lib/supabase';
+import { compressImage } from '@/lib/image';
+import { compressVideo, extractVideoFrame, VIDEO_MAX_SIZE } from '@/lib/video';
 
-const BUCKET = 'gallery'; // превью видео храним в том же bucket
+const BUCKET = 'gallery';       // обложки-превью видео
+const VIDEO_BUCKET = 'videos';  // сами видеофайлы (публичный bucket в Supabase Storage)
 
 type Video = {
   id: number;
@@ -23,8 +26,8 @@ type Video = {
 type VideoForm = {
   title: string;
   date: string;      // input type="date" — '2026-10-25'
-  video_url: string;
-  previewUrl: string; // URL превью (заполняется загрузкой или вручную)
+  video_url: string;   // URL загруженного видеофайла (Storage, bucket 'videos')
+  previewUrl: string;  // URL превью (заполняется загрузкой или вручную)
 };
 
 const EMPTY_FORM: VideoForm = {
@@ -47,6 +50,9 @@ export default function AdminVideosPage() {
   const [saving, setSaving] = useState(false);
   const [uploadingPreview, setUploadingPreview] = useState(false);
   const previewInputRef = useRef<HTMLInputElement>(null);
+  const [uploadingVideo, setUploadingVideo] = useState(false);
+  const [videoProgress, setVideoProgress] = useState<number | null>(null); // прогресс сжатия, %
+  const videoInputRef = useRef<HTMLInputElement>(null);
 
   /* Перетаскивание пальцем (touch) */
   const listRef = useRef<HTMLUListElement>(null);
@@ -129,12 +135,14 @@ export default function AdminVideosPage() {
 
   /* ---------- Загрузка превью в Storage ---------- */
   const handlePreviewUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+    const rawFile = e.target.files?.[0];
+    if (!rawFile) return;
     e.target.value = '';
 
     setUploadingPreview(true);
     setFormError(null);
+
+    const file = await compressImage(rawFile); // сжимаем перед загрузкой
 
     const ext = file.name.split('.').pop();
     const fileName = `video-preview-${Date.now()}.${ext}`;
@@ -155,6 +163,88 @@ export default function AdminVideosPage() {
 
     setForm((f) => ({ ...f, previewUrl: urlData.publicUrl }));
     setUploadingPreview(false);
+  };
+
+  /* ---------- Загрузка видеофайла в Storage (bucket 'videos') ---------- */
+  const handleVideoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    e.target.value = '';
+
+    if (!file.type.startsWith('video/')) {
+      setFormError('Нужен видеофайл (mp4, webm, mov)');
+      return;
+    }
+
+    setUploadingVideo(true);
+    setFormError(null);
+    setVideoProgress(null);
+
+    // Сжимаем большие видео прямо в браузере (MediaRecorder).
+    // Без сжатия в Storage ничего не загрузим: лимит Supabase — 50 МБ на объект.
+    let uploadFile = file;
+    try {
+      if (file.size > VIDEO_MAX_SIZE) setVideoProgress(0);
+      uploadFile = await compressVideo(file, setVideoProgress);
+    } catch (err) {
+      setFormError(
+        'Не удалось сжать видео: ' +
+          (err instanceof Error ? err.message : String(err))
+      );
+      setUploadingVideo(false);
+      setVideoProgress(null);
+      return;
+    }
+    setVideoProgress(null);
+
+    if (uploadFile.size > VIDEO_MAX_SIZE) {
+      setFormError(
+        'Видео слишком большое даже после сжатия (' +
+          Math.round(uploadFile.size / 1024 / 1024) +
+          ' МБ). Попробуйте более короткий ролик.'
+      );
+      setUploadingVideo(false);
+      return;
+    }
+
+    const ext = uploadFile.name.split('.').pop();
+    const fileName = `video-${Date.now()}.${ext}`;
+
+    const { error: uploadError } = await supabase.storage
+      .from(VIDEO_BUCKET)
+      .upload(fileName, uploadFile, { cacheControl: '3600', upsert: false });
+
+    if (uploadError) {
+      setFormError('Ошибка загрузки видео: ' + uploadError.message);
+      setUploadingVideo(false);
+      return;
+    }
+
+    const publicUrl = supabase.storage.from(VIDEO_BUCKET).getPublicUrl(fileName)
+      .data.publicUrl;
+
+    setForm((f) => ({ ...f, video_url: publicUrl }));
+
+    // Автообложка: если превью не загружено, берём кадр из видео
+    if (!form.previewUrl) {
+      try {
+        const frame = await extractVideoFrame(uploadFile);
+        const previewName = `video-preview-${Date.now()}.jpg`;
+        const { error: previewError } = await supabase.storage
+          .from(BUCKET)
+          .upload(previewName, frame, { cacheControl: '3600', upsert: false });
+        if (!previewError) {
+          const previewUrl = supabase.storage
+            .from(BUCKET)
+            .getPublicUrl(previewName).data.publicUrl;
+          setForm((f) => ({ ...f, previewUrl }));
+        }
+      } catch {
+        // Обложка не критична — видео уже загружено
+      }
+    }
+
+    setUploadingVideo(false);
   };
 
   /* ---------- Модалка ---------- */
@@ -187,7 +277,7 @@ export default function AdminVideosPage() {
 
     if (!form.title.trim()) return setFormError('Введите название');
     if (!form.date) return setFormError('Укажите дату');
-    if (!form.video_url.trim()) return setFormError('Вставьте ссылку на видео');
+    if (!form.video_url.trim()) return setFormError('Загрузите видеофайл');
 
     setSaving(true);
 
@@ -231,6 +321,12 @@ export default function AdminVideosPage() {
     if (video.preview?.includes(`/${BUCKET}/`)) {
       const fileName = video.preview.split('/').pop();
       if (fileName) await supabase.storage.from(BUCKET).remove([fileName]);
+    }
+
+    // Удаляем сам видеофайл из bucket 'videos'
+    if (video.video_url?.includes(`/${VIDEO_BUCKET}/`)) {
+      const fileName = video.video_url.split('/').pop();
+      if (fileName) await supabase.storage.from(VIDEO_BUCKET).remove([fileName]);
     }
 
     fetchVideos();
@@ -420,15 +516,47 @@ export default function AdminVideosPage() {
               </div>
 
               <div className="vdm__field">
-                <label className="vdm__label" htmlFor="vd-url">Ссылка на видео *</label>
+                <span className="vdm__label">Видеофайл *</span>
+
+                {form.video_url ? (
+                  <div className="vdm__preview-ready">
+                    <video
+                      src={form.video_url}
+                      controls
+                      muted
+                      style={{ width: '100%', borderRadius: 4, display: 'block' }}
+                    />
+                    <button
+                      type="button"
+                      className="vdm__preview-remove"
+                      onClick={() => setForm((f) => ({ ...f, video_url: '' }))}
+                    >
+                      Убрать
+                    </button>
+                  </div>
+                ) : (
+                  <div className="vdm__preview-actions">
+                    <button
+                      type="button"
+                      className="vdm__upload-btn"
+                      onClick={() => videoInputRef.current?.click()}
+                      disabled={uploadingVideo}
+                    >
+                      {uploadingVideo
+                        ? videoProgress !== null
+                          ? `Сжатие видео… ${videoProgress}%`
+                          : 'Загрузка… (может занять время)'
+                        : 'Загрузить видео'}
+                    </button>
+                  </div>
+                )}
+
                 <input
-                  id="vd-url"
-                  className="vdm__input"
-                  type="url"
-                  name="video_url"
-                  value={form.video_url}
-                  onChange={handleChange}
-                  placeholder="https://youtube.com/… или https://vk.com/video…"
+                  ref={videoInputRef}
+                  type="file"
+                  accept="video/*"
+                  hidden
+                  onChange={handleVideoUpload}
                 />
               </div>
 

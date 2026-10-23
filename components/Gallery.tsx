@@ -27,14 +27,14 @@ export default function Gallery() {
   const sectionRef = useRef<HTMLElement>(null);
   const [inView, setInView] = useState(false);
 
-  /* Количество колонок: 4 на десктопе, 2 на мобильном.
+  /* Количество колонок: 3 на десктопе, 2 на мобильном.
      Фото распределяются по индексу — колонка каждого фото фиксирована,
      поэтому подгрузка новых не меняет расстановку. */
   const [colCount, setColCount] = useState(3);
 
   useEffect(() => {
     const mq = window.matchMedia('(max-width: 640px)');
-    const apply = () => setColCount(mq.matches ? 2 : 3);
+    const apply = () => setColCount(mq.matches ? 3 : 3);
     apply();
     mq.addEventListener('change', apply);
     return () => mq.removeEventListener('change', apply);
@@ -170,7 +170,7 @@ export default function Gallery() {
 const GALLERY_CSS = `
   .rsc-gallery {
     background: #060606;
-    padding: 110px 24px 70px;
+    padding: 120px 24px 80px;
     overflow-x: clip;
   }
 
@@ -364,7 +364,7 @@ const GALLERY_CSS = `
   /* ---------- Адаптив ---------- */
   @media (max-width: 640px) {
     .rsc-gallery {
-      padding: 80px 16px 90px;
+      padding: 80px 16px 80px;
     }
 
     .rsc-gallery__grid,

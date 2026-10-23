@@ -175,7 +175,7 @@ export default function News() {
 const NEWS_CSS = `
   .rsc-news {
     background: #060606;
-    padding: 110px 24px 120px;
+    padding: 120px 24px 120px;
     overflow-x: clip;
   }
 
@@ -433,7 +433,7 @@ const NEWS_CSS = `
   /* ---------- Мобилка ---------- */
   @media (max-width: 640px) {
     .rsc-news {
-      padding: 80px 16px 90px;
+      padding: 80px 16px 80px;
     }
 
     .rsc-news__list {

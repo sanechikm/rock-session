@@ -25,3 +25,84 @@ body {
   font-family: Arial, Helvetica, sans-serif;
 }
 
+/* ---------- Скроллбар: тусклый ползунок, акцент при наведении,
+   без стрелок и без смещения контента при модалках ---------- */
+:root {
+  color-scheme: dark;
+}
+
+html {
+  scrollbar-gutter: stable; /* место полосы резервируется всегда — модалки не дёргают контент */
+  scrollbar-width: thin;
+  /* Firefox: тусклый акцент, трек прозрачный (hover в Firefox недоступен) */
+  scrollbar-color: color-mix(in srgb, var(--accent, #00c3d0) 30%, transparent) transparent;
+}
+
+/* WebKit (Chrome, Edge, Яндекс и др.) */
+html::-webkit-scrollbar,
+body::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+html::-webkit-scrollbar-track,
+body::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+/* Ползунок: тусклый и полупрозрачный, при наведении — яркий акцент */
+html::-webkit-scrollbar-thumb,
+body::-webkit-scrollbar-thumb {
+  background-color: color-mix(in srgb, var(--accent, #00c3d0) 20%, transparent);
+  border-radius: 8px;
+  border: 2px solid transparent; /* окантовка — эффект «парящего» ползунка */
+  background-clip: padding-box;
+}
+
+html::-webkit-scrollbar-thumb:hover,
+html::-webkit-scrollbar-thumb:active,
+body::-webkit-scrollbar-thumb:hover,
+body::-webkit-scrollbar-thumb:active {
+  background-color: var(--accent, #00c3d0);
+}
+
+/* Стрелки-кнопки на концах полосы: полная матрица селекторов —
+   некоторые движки WebKit скрывают кнопку только с явным :vertical/:horizontal */
+html::-webkit-scrollbar-button,
+body::-webkit-scrollbar-button,
+html::-webkit-scrollbar-button:vertical,
+body::-webkit-scrollbar-button:vertical,
+html::-webkit-scrollbar-button:horizontal,
+body::-webkit-scrollbar-button:horizontal,
+html::-webkit-scrollbar-button:start,
+html::-webkit-scrollbar-button:end,
+html::-webkit-scrollbar-button:increment,
+html::-webkit-scrollbar-button:decrement,
+html::-webkit-scrollbar-button:vertical:start,
+html::-webkit-scrollbar-button:vertical:end,
+html::-webkit-scrollbar-button:vertical:increment,
+html::-webkit-scrollbar-button:vertical:decrement,
+html::-webkit-scrollbar-button:horizontal:start,
+html::-webkit-scrollbar-button:horizontal:end,
+html::-webkit-scrollbar-button:horizontal:increment,
+html::-webkit-scrollbar-button:horizontal:decrement,
+body::-webkit-scrollbar-button:start,
+body::-webkit-scrollbar-button:end,
+body::-webkit-scrollbar-button:increment,
+body::-webkit-scrollbar-button:decrement,
+body::-webkit-scrollbar-button:vertical:start,
+body::-webkit-scrollbar-button:vertical:end,
+body::-webkit-scrollbar-button:vertical:increment,
+body::-webkit-scrollbar-button:vertical:decrement,
+body::-webkit-scrollbar-button:horizontal:start,
+body::-webkit-scrollbar-button:horizontal:end,
+body::-webkit-scrollbar-button:horizontal:increment,
+body::-webkit-scrollbar-button:horizontal:decrement {
+  -webkit-appearance: none;
+  appearance: none;
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+  background: transparent !important;
+  border: none !important;
+}

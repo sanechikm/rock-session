@@ -5,8 +5,10 @@
 
 import { useState, useCallback, useEffect, useRef } from 'react';
 import type { SitePoster } from './Posters';
+import LavaButton from './LavaButton';
 import EventModal from './EventModal';
 import TicketFrame from './TicketFrame';
+import TicketFrameMobile from './TicketFrameMobile';
 import Barcode from './Barcode';
 
 const MONTHS_RU = [
@@ -76,6 +78,7 @@ export default function PostersClient({ posters }: { posters: SitePoster[] }) {
               style={{ transitionDelay: inView ? `${index * 0.09}s` : '0s' }}
             >
               <TicketFrame accent={isNearest} />
+              <TicketFrameMobile accent={isNearest} />
               <div className="rsc-ticket__inner">
               <div className="rsc-ticket__date">
                 <span className="rsc-ticket__day">{event.day}</span>
@@ -108,14 +111,10 @@ export default function PostersClient({ posters }: { posters: SitePoster[] }) {
                       Подробнее
                     </button>
                     {event.ticket_url && (
-                      <a
-                        href={event.ticket_url}
+                      <LavaButton
+                        ticketUrl={event.ticket_url}
                         className="rsc-ticket__btn rsc-ticket__btn--primary"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                      >
-                        Купить билет
-                      </a>
+                      />
                     )}
                   </div>
                 </div>

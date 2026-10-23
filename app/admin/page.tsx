@@ -29,6 +29,7 @@ export type LandingBlock = {
 const DEFAULT_BLOCKS: LandingBlock[] = [
   { id: 'about', title: 'О нас', visible: true },
   { id: 'posters', title: 'Афиши', visible: true },
+  { id: 'past', title: 'Отыграли', visible: true },
   { id: 'partners', title: 'Партнёры', visible: true },
   { id: 'news', title: 'Новости', visible: true },
   { id: 'gallery', title: 'Галерея', visible: true },
@@ -37,6 +38,31 @@ const DEFAULT_BLOCKS: LandingBlock[] = [
 ];
 
 const DEFAULT_ACCENT = ACCENT_COLORS[0].value;
+
+/* Слияние сохранённых блоков с дефолтами:
+   порядок и видимость из базы сохраняются, а новые блоки
+   (например, «Отыграли») подставляются после своего «соседа»
+   даже если настройки были сохранены до их появления. */
+function mergeBlocks(
+  defaults: LandingBlock[],
+  saved: LandingBlock[] | null
+): LandingBlock[] {
+  if (!saved) return defaults;
+
+  // известные блоки — в сохранённом порядке
+  const result = saved.filter((b) => defaults.some((d) => d.id === b.id));
+
+  // недостающие дефолтные — вставляем после предыдущего блока из дефолтов
+  for (const d of defaults) {
+    if (result.some((b) => b.id === d.id)) continue;
+    const prev = defaults[defaults.indexOf(d) - 1];
+    const prevIndex = prev ? result.findIndex((b) => b.id === prev.id) : -1;
+    if (prevIndex >= 0) result.splice(prevIndex + 1, 0, d);
+    else result.push(d);
+  }
+
+  return result;
+}
 
 const KEY_COLOR = 'accent_color';
 const KEY_BLOCKS = 'landing_blocks';
@@ -82,7 +108,23 @@ export default function AdminSettingsPage() {
 
       for (const row of data) {
         if (row.key === KEY_COLOR) setAccent(row.value as string);
-        if (row.key === KEY_BLOCKS) setBlocks(row.value as LandingBlock[]);
+        if (row.key === KEY_BLOCKS) {
+          const saved = row.value as LandingBlock[];
+          const merged = mergeBlocks(DEFAULT_BLOCKS, saved);
+          setBlocks(merged);
+          // Подлечиваем запись в базе: добавляем новые блоки
+          // («Отыграли» и далее), чтобы админка и сайт не расходились
+          if (JSON.stringify(merged) !== JSON.stringify(saved)) {
+            void supabase.from('settings').upsert(
+              {
+                key: KEY_BLOCKS,
+                value: merged,
+                updated_at: new Date().toISOString(),
+              },
+              { onConflict: 'key' }
+            );
+          }
+        }
       }
       setLoading(false);
     })();

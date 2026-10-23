@@ -170,7 +170,7 @@ export default function Faq() {
 const FAQ_CSS = `
   .rsc-faq {
     background: #060606;
-    padding: 110px 24px 120px;
+    padding: 120px 24px 120px;
     overflow-x: clip;
   }
 
@@ -315,7 +315,7 @@ const FAQ_CSS = `
 
   @media (max-width: 640px) {
     .rsc-faq {
-      padding: 80px 16px 90px;
+      padding: 80px 16px 80px;
     }
 
     .rsc-faq__question {

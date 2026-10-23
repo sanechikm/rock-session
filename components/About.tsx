@@ -240,7 +240,7 @@ export default function About() {
 const ABOUT_CSS = `
   .rsc-about {
     background: #060606;
-    padding: 110px 24px 50px;
+    padding: 120px 24px 120px;
     opacity: 0;
     transform: translateY(36px);
     transition: opacity 0.8s ease, transform 0.8s cubic-bezier(0.22, 0.8, 0.3, 1);
@@ -436,7 +436,7 @@ const ABOUT_CSS = `
 
   @media (max-width: 640px) {
     .rsc-about {
-      padding: 80px 20px 90px;
+      padding: 80px 20px 80px;
     }
 
     .rsc-about__cover {

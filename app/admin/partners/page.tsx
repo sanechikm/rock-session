@@ -8,6 +8,7 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/lib/supabase';
+import { compressImage } from '@/lib/image';
 
 const BUCKET = 'gallery';
 
@@ -195,12 +196,14 @@ export default function AdminPartnersPage() {
     setUploadingLogo(true);
     setFormError(null);
 
-    const ext = file.name.split('.').pop();
+    const compressed = await compressImage(file); // сжимаем перед загрузкой
+
+    const ext = compressed.name.split('.').pop();
     const fileName = `logo-${Date.now()}.${ext}`;
 
     const { error: uploadError } = await supabase.storage
       .from(BUCKET)
-      .upload(fileName, file);
+      .upload(fileName, compressed);
 
     if (uploadError) {
       setFormError('Ошибка загрузки логотипа: ' + uploadError.message);

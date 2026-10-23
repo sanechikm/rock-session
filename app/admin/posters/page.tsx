@@ -7,17 +7,19 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/lib/supabase';
+import { compressImage } from '@/lib/image';
 
 const BUCKET = 'gallery';
 
 /* ---------- Типы ---------- */
-type Artist = { name: string; role: string };
-type CrewMember = { name: string; role: string };
+type Artist = { name: string; photo?: string };
+type CrewMember = { name: string; role: string; photo?: string };
 
 type Poster = {
   id: number;
   title: string;
   description: string | null;
+  description_full?: string | null; // подробное описание для модалки
   day: string;
   month: string;
   time: string;
@@ -43,7 +45,8 @@ type PosterForm = {
   price_from: string;
   price_to: string;
   ticket_url: string;
-  description: string;
+  description: string;      // краткое — на билете афиши
+  description_full: string; // подробное — в модальном окне
   is_past: boolean;
   imageUrl: string;
   use_as_hero: boolean;
@@ -60,6 +63,7 @@ const EMPTY_FORM: PosterForm = {
   price_to: '',
   ticket_url: '',
   description: '',
+  description_full: '',
   is_past: false,
   imageUrl: '',
   use_as_hero: false,
@@ -101,6 +105,78 @@ export default function AdminPostersPage() {
   }, [fetchPosters]);
 
   /* ---------- Обложка ---------- */
+  const personPhotoInputRef = useRef<HTMLInputElement>(null);
+  const [personPhotoTarget, setPersonPhotoTarget] = useState<
+    { kind: 'artist' | 'partner'; index: number } | null
+  >(null);
+  const [uploadingPersonPhoto, setUploadingPersonPhoto] = useState(false);
+
+  /* ---------- Загрузка фото исполнителя/партнёра ---------- */
+  const handlePersonPhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    const target = personPhotoTarget;
+    if (!file || !target) return;
+    e.target.value = '';
+
+    setUploadingPersonPhoto(true);
+    setFormError(null);
+
+    try {
+      const compressed = await compressImage(file);
+      const ext = compressed.name.split('.').pop();
+      const fileName = `person-${Date.now()}.${ext}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from(BUCKET)
+        .upload(fileName, compressed, { cacheControl: '3600', upsert: false });
+
+      if (uploadError) {
+        setFormError('Ошибка загрузки фото: ' + uploadError.message);
+        return;
+      }
+
+      const { data: urlData } = supabase.storage.from(BUCKET).getPublicUrl(fileName);
+
+      if (target.kind === 'artist') {
+        setForm((f) => ({
+          ...f,
+          artists: f.artists.map((ar, i) =>
+            i === target.index ? { ...ar, photo: urlData.publicUrl } : ar
+          ),
+        }));
+      } else {
+        setForm((f) => ({
+          ...f,
+          partners: f.partners.map((p, i) =>
+            i === target.index ? { ...p, photo: urlData.publicUrl } : p
+          ),
+        }));
+      }
+    } finally {
+      setUploadingPersonPhoto(false);
+      setPersonPhotoTarget(null);
+    }
+  };
+
+  const pickPersonPhoto = (kind: 'artist' | 'partner', index: number) => {
+    setPersonPhotoTarget({ kind, index });
+    personPhotoInputRef.current?.click();
+  };
+
+  const removePersonPhoto = (kind: 'artist' | 'partner', index: number) => {
+    if (kind === 'artist') {
+      setForm((f) => ({
+        ...f,
+        artists: f.artists.map((ar, i) => (i === index ? { ...ar, photo: undefined } : ar)),
+      }));
+    } else {
+      setForm((f) => ({
+        ...f,
+        partners: f.partners.map((p, i) => (i === index ? { ...p, photo: undefined } : p)),
+      }));
+    }
+  };
+
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -148,12 +224,15 @@ export default function AdminPostersPage() {
       price_to: poster.price_to?.toString() || '',
       ticket_url: poster.ticket_url || '',
       description: poster.description || '',
+      description_full: poster.description_full || '',
       is_past: poster.is_past,
       imageUrl: poster.image || '',
       use_as_hero: poster.use_as_hero ?? false,
-      artists: (poster.artists || []).map((a) => ({ name: a.name || '', role: a.role || '' })),
+      artists: (poster.artists || []).map((a) => ({ name: a.name || '', photo: a.photo || '' })),
       partners: (poster.event_partners || []).map((p) =>
-        typeof p === 'string' ? { name: p, role: '' } : { name: p.name || '', role: p.role || '' }
+        typeof p === 'string'
+          ? { name: p, role: '', photo: '' }
+          : { name: p.name || '', role: p.role || '', photo: p.photo || '' }
       ),
     });
     setFormError(null);
@@ -189,7 +268,7 @@ export default function AdminPostersPage() {
   };
 
   const addArtist = () =>
-    setForm((f) => ({ ...f, artists: [...f.artists, { name: '', role: '', social: '' }] }));
+    setForm((f) => ({ ...f, artists: [...f.artists, { name: '', photo: '' }] }));
 
   const removeArtist = (index: number) =>
     setForm((f) => ({ ...f, artists: f.artists.filter((_, i) => i !== index) }));
@@ -203,7 +282,7 @@ export default function AdminPostersPage() {
   };
 
   const addPartner = () =>
-    setForm((f) => ({ ...f, partners: [...f.partners, { name: '', role: '' }] }));
+    setForm((f) => ({ ...f, partners: [...f.partners, { name: '', role: '', photo: '' }] }));
 
   const removePartner = (index: number) =>
     setForm((f) => ({ ...f, partners: f.partners.filter((_, i) => i !== index) }));
@@ -226,6 +305,7 @@ export default function AdminPostersPage() {
     const record = {
       title: form.title.trim(),
       description: form.description.trim() || null,
+      description_full: form.description_full.trim() || null,
       day,
       month: monthName,
       time: form.time,
@@ -239,10 +319,17 @@ export default function AdminPostersPage() {
       use_as_hero: form.use_as_hero,
       artists: form.artists
         .filter((a) => a.name.trim())
-        .map((a) => ({ name: a.name.trim(), role: a.role.trim() || undefined })),
+        .map((a) => ({
+          name: a.name.trim(),
+          photo: a.photo || undefined,
+        })),
       event_partners: form.partners
         .filter((p) => p.name.trim())
-        .map((p) => ({ name: p.name.trim(), role: p.role.trim() || undefined })),
+        .map((p) => ({
+          name: p.name.trim(),
+          role: p.role.trim() || undefined,
+          photo: p.photo || undefined,
+        })),
     };
 
     let saveError = null;
@@ -441,6 +528,13 @@ export default function AdminPostersPage() {
                 )}
 
                 <input
+                  ref={personPhotoInputRef}
+                  type="file"
+                  accept="image/*"
+                  hidden
+                  onChange={handlePersonPhotoUpload}
+                />
+                <input
                   ref={imageInputRef}
                   type="file"
                   accept="image/*"
@@ -501,12 +595,17 @@ export default function AdminPostersPage() {
 
               <div className="ptm__field">
                 <label className="ptm__label" htmlFor="pt-ticket">Ссылка на покупку (Lava)</label>
-                <input id="pt-ticket" className="ptm__input" type="url" name="ticket_url" value={form.ticket_url} onChange={handleChange} placeholder="https://…" />
+                <input id="pt-ticket" className="ptm__input" type="url" name="ticket_url" value={form.ticket_url} onChange={handleChange} placeholder="https://llava.ru/e/… — ссылка на событие Lava" />
               </div>
 
               <div className="ptm__field">
-                <label className="ptm__label" htmlFor="pt-desc">Описание концерта</label>
-                <textarea id="pt-desc" className="ptm__input ptm__input--textarea" name="description" value={form.description} onChange={handleChange} placeholder="Полный текст описания события" rows={4} />
+                <label className="ptm__label" htmlFor="pt-desc">Краткое описание (на билет афиши)</label>
+                <textarea id="pt-desc" className="ptm__input ptm__input--textarea" name="description" value={form.description} onChange={handleChange} placeholder="Пара предложений — они попадут на сам билет" rows={3} />
+              </div>
+
+              <div className="ptm__field">
+                <label className="ptm__label" htmlFor="pt-desc-full">Подробное описание (в модальное окно)</label>
+                <textarea id="pt-desc-full" className="ptm__input ptm__input--textarea" name="description_full" value={form.description_full} onChange={handleChange} placeholder="Полный текст о концерте: программа, истории, состав…" rows={8} />
               </div>
 
               {/* ---------- АРТИСТЫ ---------- */}
@@ -515,6 +614,36 @@ export default function AdminPostersPage() {
 
                 {form.artists.map((artist, i) => (
                   <div key={i} className="ptm__artist">
+                    {/* Фото исполнителя */}
+                    <div className="ptm__person-photo">
+                      {artist.photo ? (
+                        <>
+                          <img src={artist.photo} alt="" />
+                          <button
+                            type="button"
+                            className="ptm__person-photo-remove"
+                            onClick={() => removePersonPhoto('artist', i)}
+                            aria-label="Убрать фото"
+                            title="Убрать фото"
+                          >
+                            ×
+                          </button>
+                        </>
+                      ) : (
+                        <button
+                          type="button"
+                          className="ptm__person-photo-add"
+                          onClick={() => pickPersonPhoto('artist', i)}
+                          disabled={uploadingPersonPhoto}
+                          aria-label="Загрузить фото"
+                          title="Загрузить фото"
+                        >
+                          {uploadingPersonPhoto && personPhotoTarget?.kind === 'artist' && personPhotoTarget.index === i
+                            ? '…'
+                            : '+'}
+                        </button>
+                      )}
+                    </div>
                     <div className="ptm__artist-fields">
                       <input
                         className="ptm__input"
@@ -522,13 +651,6 @@ export default function AdminPostersPage() {
                         placeholder="Имя *"
                         value={artist.name}
                         onChange={(e) => handleArtistChange(i, 'name', e.target.value)}
-                      />
-                      <input
-                        className="ptm__input"
-                        type="text"
-                        placeholder="Роль (Хедлайнер, Спецгость…)"
-                        value={artist.role}
-                        onChange={(e) => handleArtistChange(i, 'role', e.target.value)}
                       />
                     </div>
                     <button
@@ -556,6 +678,36 @@ export default function AdminPostersPage() {
 
                 {form.partners.map((partner, i) => (
                   <div key={i} className="ptm__partner">
+                    {/* Фото партнёра */}
+                    <div className="ptm__person-photo">
+                      {partner.photo ? (
+                        <>
+                          <img src={partner.photo} alt="" />
+                          <button
+                            type="button"
+                            className="ptm__person-photo-remove"
+                            onClick={() => removePersonPhoto('partner', i)}
+                            aria-label="Убрать фото"
+                            title="Убрать фото"
+                          >
+                            ×
+                          </button>
+                        </>
+                      ) : (
+                        <button
+                          type="button"
+                          className="ptm__person-photo-add"
+                          onClick={() => pickPersonPhoto('partner', i)}
+                          disabled={uploadingPersonPhoto}
+                          aria-label="Загрузить фото"
+                          title="Загрузить фото"
+                        >
+                          {uploadingPersonPhoto && personPhotoTarget?.kind === 'partner' && personPhotoTarget.index === i
+                            ? '…'
+                            : '+'}
+                        </button>
+                      )}
+                    </div>
                     <div className="ptm__partner-fields">
                       <input
                         className="ptm__input"
@@ -1000,6 +1152,61 @@ const POSTERS_CSS = `
     flex-direction: column;
     gap: 8px;
     min-width: 0;
+  }
+
+  .ptm__person-photo {
+    position: relative;
+    flex-shrink: 0;
+    width: 46px;
+    height: 46px;
+    border-radius: 8px;
+    overflow: visible;
+  }
+
+  .ptm__person-photo img {
+    width: 46px;
+    height: 46px;
+    object-fit: cover;
+    border-radius: 8px;
+    display: block;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+  }
+
+  .ptm__person-photo-add {
+    width: 46px;
+    height: 46px;
+    font-size: 20px;
+    line-height: 1;
+    color: #8e8e93;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px dashed rgba(255, 255, 255, 0.25);
+    border-radius: 8px;
+    cursor: pointer;
+    transition: color 0.2s ease, border-color 0.2s ease;
+  }
+
+  .ptm__person-photo-add:hover {
+    color: var(--accent, #00c3d0);
+    border-color: var(--accent, #00c3d0);
+  }
+
+  .ptm__person-photo-remove {
+    position: absolute;
+    top: -6px;
+    right: -6px;
+    width: 18px;
+    height: 18px;
+    padding: 0;
+    font-size: 13px;
+    line-height: 1;
+    color: #ffffff;
+    background: #d93a56;
+    border: none;
+    border-radius: 50%;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
   }
 
   .ptm__remove-btn {

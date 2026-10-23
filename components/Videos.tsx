@@ -19,6 +19,7 @@ type Video = {
 export default function Videos() {
   const [videos, setVideos] = useState<Video[]>([]);
   const [loading, setLoading] = useState(true);
+  const [playing, setPlaying] = useState<Video | null>(null); // видео, открытое в плеере
   const trackRef = useRef<HTMLDivElement>(null);
   const [canScrollLeft, setCanScrollLeft] = useState(false);
   const [canScrollRight, setCanScrollRight] = useState(true);
@@ -93,18 +94,24 @@ export default function Videos() {
 
           <div className="rsc-videos__carousel">
             {/* Горизонтальная лента */}
-            <div className="rsc-videos__track" ref={trackRef} onScroll={checkScroll}>
+            <div
+              className={
+                'rsc-videos__track' +
+                (videos.length > 2 ? '' : ' rsc-videos__track--few')
+              }
+              ref={trackRef}
+              onScroll={checkScroll}
+            >
               {videos.map((video, i) => (
                 <article
                   key={video.id}
                   className="rsc-videos__card"
                   style={{ transitionDelay: inView ? `${0.2 + i * 0.08}s` : '0s' }}
                 >
-                  <a
-                    href={video.video_url}
+                  <button
+                    type="button"
+                    onClick={() => setPlaying(video)}
                     className="rsc-videos__preview"
-                    target="_blank"
-                    rel="noopener noreferrer"
                     aria-label={`Смотреть: ${video.title}`}
                   >
                     {video.preview ? (
@@ -128,7 +135,7 @@ export default function Videos() {
                         <path d="M8 5v14l11-7z" />
                       </svg>
                     </span>
-                  </a>
+                  </button>
 
                   <div className="rsc-videos__meta">
                     <h3 className="rsc-videos__title">{video.title}</h3>
@@ -171,6 +178,34 @@ export default function Videos() {
           </div>
         </div>
       </section>
+      {/* Плеер: видео хранится у нас в Storage, открываем в модалке */}
+      {playing && (
+        <div
+          className="rsc-videos__modal"
+          onClick={() => setPlaying(null)}
+          role="dialog"
+          aria-modal="true"
+          aria-label={playing.title}
+        >
+          <button
+            className="rsc-videos__modal-close"
+            onClick={() => setPlaying(null)}
+            aria-label="Закрыть"
+          >
+            <svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
+              <path d="M6 6l12 12M18 6L6 18" />
+            </svg>
+          </button>
+          <video
+            src={playing.video_url}
+            controls
+            autoPlay
+            playsInline
+            className="rsc-videos__modal-video"
+            onClick={(e) => e.stopPropagation()}
+          />
+        </div>
+      )}
     </>
   );
 }
@@ -178,7 +213,7 @@ export default function Videos() {
 const VIDEOS_CSS = `
   .rsc-videos {
     background: #060606;
-    padding: 110px 24px 120px;
+    padding: 120px 24px 120px;
     overflow-x: clip;
   }
 
@@ -240,6 +275,15 @@ const VIDEOS_CSS = `
     scroll-behavior: smooth;
   }
 
+  /* Два видео и меньше — карточки по центру.
+     На узком экране две карточки не помещаются рядом —
+     там лента остаётся обычной, чтобы ничего не обрезалось. */
+  @media (min-width: 1080px) {
+    .rsc-videos__track--few {
+      justify-content: center;
+    }
+  }
+
   .rsc-videos__track::-webkit-scrollbar {
     display: none;
   }
@@ -252,10 +296,17 @@ const VIDEOS_CSS = `
   .rsc-videos__preview {
     position: relative;
     display: block;
+    width: 100%;
+    padding: 0;
+    border: none;
     aspect-ratio: 16 / 9;
     border-radius: 6px;
     overflow: hidden;
     background: #141414;
+    font: inherit;
+    color: inherit;
+    text-align: left;
+    cursor: pointer;
   }
 
   .rsc-videos__img {
@@ -393,7 +444,7 @@ const VIDEOS_CSS = `
 
   @media (max-width: 640px) {
     .rsc-videos {
-      padding: 80px 16px 90px;
+      padding: 80px 16px 80px;
     }
 
     .rsc-videos__card {
@@ -412,5 +463,52 @@ const VIDEOS_CSS = `
 
     .rsc-videos__arrow--left { left: 8px; }
     .rsc-videos__arrow--right { right: 8px; }
+  }
+
+
+  /* ---------- Плеер-модалка ---------- */
+  .rsc-videos__modal {
+    position: fixed;
+    inset: 0;
+    z-index: 100;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0, 0, 0, 0.9);
+    padding: 24px;
+    animation: rsc-videos-modal-in 0.25s ease;
+  }
+
+  @keyframes rsc-videos-modal-in {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+  }
+
+  .rsc-videos__modal-video {
+    width: 100%;
+    max-width: 960px;
+    max-height: 85vh;
+    border-radius: 6px;
+    background: #000;
+  }
+
+  .rsc-videos__modal-close {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 44px;
+    height: 44px;
+    color: #ffffff;
+    background: none;
+    border: none;
+    cursor: pointer;
+    transition: color 0.25s ease;
+  }
+
+  .rsc-videos__modal-close:hover {
+    color: var(--accent, #00c3d0);
   }
 `;
